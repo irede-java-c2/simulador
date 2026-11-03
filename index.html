@@ -1,6 +1,481 @@
-<html>
-  <head>Task Manager API</head>
-  <body>
-    <h1>Simluador - Task Manager API</h1>
-  </body>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Java Web — Simulador — Capacita Brasil</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:          #f0f0f5;
+  --surface:     #ffffff;
+  --border:      #d8d5e8;
+  --accent:      #8d62ff;
+  --accent2:     #00c896;
+  --text:        #1a1730;
+  --muted:       #7a748f;
+  --radius:      10px;
+  --glow:        0 0 18px rgba(141,98,255,0.15);
+  --grad:        linear-gradient(270deg, #8d62ff 53.6%, #00ffbc 98.32%);
+  --surface2:    #f7f5ff;
+  --mint:        #00c896;
+  --warn:        #d48a00;
+  --line:        linear-gradient(180deg, #2ee6c0 0%, #3fc6e8 45%, #5b8cff 75%, #8d62ff 100%);
+  --locked:      #b9b4cc;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+  padding: 0 0 60px;
+  background-image:
+    radial-gradient(ellipse 70% 40% at 50% -10%, rgba(141,98,255,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 30% at 80% 110%, rgba(0,200,150,0.06) 0%, transparent 70%);
+}
+header {
+  text-align: center;
+  padding: 36px 20px 28px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  background: var(--surface);
+  box-shadow: 0 2px 16px rgba(141,98,255,0.07);
+}
+header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 2px;
+  background: linear-gradient(90deg, transparent, #8d62ff, transparent);
+}
+.header-logo { height: 48px; margin-bottom: 14px; display: block; margin-left: auto; margin-right: auto; }
+.logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  background: var(--grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.logo span { opacity: 0.6; }
+.subtitle { color: var(--muted); font-size: .85rem; margin-top: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+.wrap { max-width: 780px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+
+/* ---------- Projeto do módulo ---------- */
+.project-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 1.25rem 1.5rem; margin-bottom: 2.5rem; position: relative; overflow: hidden;
+  box-shadow: 0 2px 10px rgba(141,98,255,0.06);
+  display: flex; gap: 1.25rem; align-items: center; flex-wrap: wrap;
+}
+.project-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--grad); }
+.project-info { flex: 1 1 320px; }
+.project-title { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.project-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.stack { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
+.pill { display: inline-block; padding: 3px 11px; border-radius: 99px; font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.pill-amber { background: rgba(212,138,0,.1); border: 1px solid rgba(212,138,0,.25); color: var(--warn); }
+.pill-green { background: rgba(0,200,150,.12); border: 1px solid rgba(0,200,150,.3); color: #0a7a5a; }
+.pill-grad  { background: var(--grad); color: #fff; }
+.pill-gray  { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+.pill-java  { background: rgba(232,111,0,.1); border: 1px solid rgba(232,111,0,.25); color: #b45400; }
+.pill-blue  { background: rgba(60,120,255,.1); border: 1px solid rgba(60,120,255,.25); color: #2856c8; }
+
+/* ---------- Sumário ---------- */
+.sumario-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.sumario-head h1 { font-family: 'Space Grotesk', sans-serif; font-size: clamp(2rem, 6vw, 2.8rem); font-weight: 700; letter-spacing: -1px; line-height: 1; }
+.progress { min-width: 220px; flex: 0 1 260px; }
+.progress-label { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); margin-bottom: 6px; text-align: right; }
+.progress-track { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--grad); border-radius: 99px; width: 0; transition: width .8s ease; }
+
+/* ---------- Timeline ---------- */
+.timeline { position: relative; padding-left: 38px; }
+.timeline::before {
+  content: ''; position: absolute; left: 11px; top: 6px; bottom: 6px; width: 4px;
+  border-radius: 99px; background: var(--line);
+}
+.phase {
+  position: relative; margin: 2rem 0 1rem; display: flex; align-items: center; gap: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--text);
+}
+.phase:first-child { margin-top: 0; }
+.phase img { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--border); }
+.phase .phase-who { font-family: 'Space Grotesk', sans-serif; font-weight: 500; color: var(--muted); }
+
+.item { position: relative; margin-bottom: 1rem; }
+.node {
+  position: absolute; left: -38px; top: 18px; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--surface); border: 2px solid #e2e0ea;
+  box-shadow: 0 1px 4px rgba(26,23,48,.12);
+  display: grid; place-items: center; font-size: 12px; color: #fff; font-weight: 700;
+}
+.item.concluido .node { background: var(--mint); border-color: var(--mint); }
+.item.atual .node { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 5px rgba(141,98,255,.18); }
+.item.atual .node::after {
+  content: ''; position: absolute; inset: -5px; border-radius: 50%;
+  border: 2px solid rgba(141,98,255,.45); animation: pulse 2s ease-out infinite;
+}
+@keyframes pulse { from { transform: scale(1); opacity: 1; } to { transform: scale(1.7); opacity: 0; } }
+.item.bloqueado .node { background: var(--surface); color: var(--locked); }
+
+.aula {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 1.1rem 1.4rem 1.2rem; box-shadow: 0 2px 10px rgba(141,98,255,0.06);
+}
+.item.atual .aula { border-color: rgba(141,98,255,.45); box-shadow: var(--glow); }
+.item.bloqueado .aula { background: rgba(255,255,255,.55); box-shadow: none; border-style: dashed; }
+
+.aula-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.aula-date { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--accent); }
+.item.bloqueado .aula-date { color: var(--muted); }
+.aula-title { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; line-height: 1.4; margin-bottom: 6px; }
+.item.bloqueado .aula-title { color: var(--muted); }
+.aula-desc { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
+
+.aula-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.entry-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 8px; background: var(--grad); color: #fff;
+  border: none; cursor: pointer; font-size: 13px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace; text-decoration: none;
+  transition: opacity .2s, transform .15s; box-shadow: 0 3px 14px rgba(141,98,255,.3);
+}
+.entry-link:hover { opacity: .88; transform: translateY(-1px); }
+.ghost-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 8px; border: 1.5px solid var(--border);
+  background: var(--surface2); color: var(--text); text-decoration: none;
+  font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono', monospace; transition: all .15s;
+}
+.ghost-link:hover { border-color: var(--accent); color: var(--accent); }
+.lock-msg { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); }
+
+
+
+/* ---------- Aulas dentro do assunto (mini-timeline) ---------- */
+.aulas { position: relative; margin: 2px 0 14px; padding-left: 22px; list-style: none; }
+.aulas::before { content: ''; position: absolute; left: 6px; top: 6px; bottom: 6px; width: 3px; border-radius: 99px; background: var(--line); }
+.item.bloqueado .aulas::before { background: var(--border); }
+.aula-n { position: relative; padding: 4px 0; font-size: 13px; line-height: 1.5; color: var(--text); }
+.aula-n::before {
+  content: ''; position: absolute; left: -22px; top: 8px; width: 15px; height: 15px; border-radius: 50%;
+  background: var(--surface); border: 1.5px solid #dcdae6; box-shadow: 0 1px 3px rgba(26,23,48,.15);
+}
+.aula-n.feita::before { background: var(--mint); border-color: var(--mint); }
+.aula-n.hoje::before { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px rgba(141,98,255,.18); }
+.item.bloqueado .aula-n { color: var(--muted); }
+.aula-n b { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--accent); margin-right: 4px; }
+.item.bloqueado .aula-n b { color: var(--muted); }
+.aula-n .quando { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-left: 4px; }
+.aula-n .tag-link { margin-left: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #0a7a5a; text-decoration: none; border-bottom: 1px dashed rgba(10,122,90,.5); }
+.aula-n .tag-link:hover { color: var(--accent); border-color: var(--accent); }
+.release-link { text-decoration: none; }
+
+a:focus-visible { outline: 3px solid rgba(141,98,255,.5); outline-offset: 2px; }
+
+.sim-banner {
+  display: none; margin-bottom: 1.5rem; padding: 10px 14px; border-radius: 10px;
+  background: rgba(212,138,0,.1); border: 1px solid rgba(212,138,0,.3); color: var(--warn);
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+}
+
+footer { text-align: center; margin-top: 3rem; font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+footer span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; }
+.instrutores { display: flex; justify-content: center; gap: 18px; margin-top: 12px; flex-wrap: wrap; }
+.instrutores a { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); text-decoration: none; font-size: 12px; }
+.instrutores a:hover { color: var(--accent); }
+.instrutores img { width: 22px; height: 22px; border-radius: 50%; }
+
+@media (max-width: 600px) {
+  .wrap { padding: 2rem 1rem 3rem; }
+  .timeline { padding-left: 32px; }
+  .timeline::before { left: 9px; }
+  .node { left: -32px; width: 22px; height: 22px; font-size: 11px; }
+  .aula { padding: 1rem 1.1rem; }
+  .progress-label { text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .item.atual .node::after { animation: none; }
+  .progress-fill, .entry-link { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <img class="header-logo" src="https://capacitabrasil.irede.org.br/assets/capacitaLogo-Ct3BEyem.png" alt="Capacita Brasil"/>
+  <div class="logo">&#x2615; <span>//</span> Java</div>
+  <div class="subtitle">Desenvolvimento Java &mdash; Material Interativo</div>
+</header>
+
+<div class="wrap">
+
+  <div class="sim-banner" id="simBanner"></div>
+
+  <div class="project-card">
+    <div class="project-info">
+      <div class="project-title">&#x1F4CB; Task Manager API</div>
+      <div class="project-desc">A API de gerenciamento de tarefas que construímos juntos a partir da aula 03. Cada aula vira uma tag <code>aula-NN</code> no repositório, e cada fase fecha com uma release.</div>
+      <div class="stack">
+        <span class="pill pill-java">Java 25</span>
+        <span class="pill pill-green">Spring Boot 3</span>
+        <span class="pill pill-blue">PostgreSQL</span>
+        <span class="pill pill-gray">NetBeans</span>
+      </div>
+    </div>
+    <a class="ghost-link" href="https://github.com/irede-java-c2/taskmanager-api" target="_blank" rel="noopener">&#x2387; Ver repositório</a>
+  </div>
+
+  <div class="sumario-head">
+    <h1>Sumário</h1>
+    <div class="progress">
+      <div class="progress-label" id="progressLabel">carregando…</div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </div>
+
+  <div class="timeline" id="timeline">
+    <noscript><p class="aula-desc">Ative o JavaScript para ver o sumário das aulas.</p></noscript>
+  </div>
+
+</div>
+
+<footer>
+  Capacita Brasil &mdash; <span>iRede</span> &mdash; Material Interativo de Java
+  <div class="instrutores" id="instrutores"></div>
+</footer>
+
+<script>
+/* =====================================================================
+   DADOS DO CURSO — edite somente aqui (ou via /nova-aula e /publicar).
+   - Assunto = 2 aulas. Aulas numeradas 01..18, como no GitHub Project.
+   - Um assunto é liberado na data da sua 1ª aula (fuso America/Fortaleza).
+   - pronto: true quando a pasta assuntoNN/ existir.
+   - aula.tag: true quando a tag aula-NN existir no taskmanager-api.
+   - aula.links: links extras da aula ({ nome, url }), ex.: branch de demo.
+   - release.publicada: true quando a release existir no GitHub.
+   ===================================================================== */
+const INSTRUTORES = {
+  alex:  { nome: 'Alex Girão',  github: 'https://github.com/alex-girao', avatar: 'https://avatars.githubusercontent.com/u/3129090?v=4' },
+  david: { nome: 'David Silva', github: 'https://github.com/davsilvam',  avatar: 'https://avatars.githubusercontent.com/u/101468533?v=4' }
+};
+
+const REPO_TASKMANAGER = 'https://github.com/irede-java-c2/taskmanager-api';
+
+const ASSUNTOS = [
+  { id: '01', fase: 1, instrutor: 'alex', emoji: '&#x1F5C4;',
+    titulo: 'Introdução ao ORM e ao Hibernate e Mapeamento de Entidades Simples',
+    desc: 'ORM com Hibernate/JPA, arquitetura e o primeiro mapeamento de entidades.',
+    pronto: true, externo: true,
+    pagina: 'https://alex-girao.github.io/irede-ciclo2-as1/unidade07/capitulo01/index.html',
+    projeto: { nome: 'loja', url: 'https://github.com/irede-java-c2/loja' },
+    aulas: [
+      { n: '01', data: '2026-10-27', tema: 'Introdução ao ORM e ao Hibernate (JPA puro, entidade Produto)' },
+      { n: '02', data: '2026-10-29', tema: 'Mapeamento de entidades simples' }
+    ] },
+
+  { id: '02', fase: 1, instrutor: 'alex', emoji: '&#x1F517;',
+    titulo: 'Relacionamentos entre Entidades (OneToMany, ManyToOne, ManyToMany)',
+    desc: 'Do Hibernate puro ao Spring Boot, e as relações entre entidades: lado dono, mappedBy, fetch e cascade. Começa aqui o Task Manager.',
+    pronto: false, pagina: 'assunto02/index.html',
+    aulas: [
+      { n: '03', data: '2026-11-03', tema: 'Projeto Spring Boot com Tarefa e Prioridade, e a relação 1:N com Usuario', tag: false },
+      { n: '04', data: '2026-11-05', tema: 'Entidade Etiqueta, relação N:N e revisão de fetch e cascade', tag: false }
+    ] },
+
+  { id: '03', fase: 1, instrutor: 'alex', emoji: '&#x1F50E;',
+    titulo: 'Consultas com JPQL e Criteria API',
+    desc: 'Consultas orientadas a objetos com JPQL e buscas dinâmicas e tipadas com a Criteria API.',
+    pronto: false, pagina: 'assunto03/index.html',
+    release: { versao: 'v0.1.0', marco: 'Marco 1 · Persistência', publicada: false },
+    aulas: [
+      { n: '05', data: '2026-11-10', tema: 'Consultas JPQL no TarefaRepository', tag: false },
+      { n: '06', data: '2026-11-12', tema: 'Busca com filtros dinâmicos e paginação', tag: false }
+    ] },
+
+  { id: '04', fase: 2, instrutor: 'david', emoji: '&#x1F310;',
+    titulo: 'Fundamentos de Web Services e Operações CRUD com REST e Spring Boot',
+    desc: 'HTTP, recursos e verbos REST. Os primeiros endpoints do Task Manager, testados no Postman.',
+    pronto: false, pagina: 'assunto04/index.html',
+    aulas: [
+      { n: '07', data: '2026-11-17', tema: 'TarefaController com GET e coleção do Postman', tag: false },
+      { n: '08', data: '2026-11-19', tema: 'POST, PUT e DELETE de tarefas com validação', tag: false }
+    ] },
+
+  { id: '05', fase: 2, instrutor: 'david', emoji: '&#x1F6A8;',
+    titulo: 'Manipulação de Erros e Respostas Personalizadas e Integração com Banco de Dados e DTOs',
+    desc: 'Erros padronizados com um handler global e DTOs na fronteira da API.',
+    pronto: false, pagina: 'assunto05/index.html',
+    aulas: [
+      { n: '09', data: '2026-11-24', tema: 'ErrorResponse, exceções customizadas e GlobalExceptionHandler', tag: false },
+      { n: '10', data: '2026-11-26', tema: 'DTOs de tarefa e usuário, sem @JsonIgnore', tag: false }
+    ] },
+
+  { id: '06', fase: 2, instrutor: 'david', emoji: '&#x2728;',
+    titulo: 'Integração com Banco de Dados e DTOs e Boas Práticas e Padrões RESTful',
+    desc: 'Camada de serviço, ModelMapper e o que torna uma API realmente RESTful.',
+    pronto: false, pagina: 'assunto06/index.html',
+    release: { versao: 'v0.2.0', marco: 'Marco 2 · API REST', publicada: false },
+    aulas: [
+      { n: '11', data: '2026-12-01', tema: 'TarefaService, UsuarioService e ModelMapper', tag: false },
+      { n: '12', data: '2026-12-03', tema: 'Rotas RESTful, PATCH, 201 com Location e paginação', tag: false }
+    ] },
+
+  { id: '07', fase: 3, instrutor: 'alex', emoji: '&#x1F510;',
+    titulo: 'Segurança em APIs REST (JWT e Spring Security)',
+    desc: 'Autenticação stateless com JWT e regras de acesso por dono da tarefa.',
+    pronto: false, pagina: 'assunto07/index.html',
+    aulas: [
+      { n: '13', data: '2026-12-08', tema: 'SecurityConfig stateless e registro com BCrypt', tag: false },
+      { n: '14', data: '2026-12-10', tema: 'Login com JWT, filtro e @PreAuthorize de dono', tag: false }
+    ] },
+
+  { id: '08', fase: 3, instrutor: 'alex', emoji: '&#x1F4D6;',
+    titulo: 'Documentação de API com Swagger/OpenAPI e Desenvolvimento de Projeto',
+    desc: 'Documentação viva com springdoc e Swagger UI, e o checklist da 3ª entrega.',
+    pronto: false, pagina: 'assunto08/index.html',
+    release: { versao: 'v0.3.0', marco: 'Marco 3 · Segurança e docs', publicada: false },
+    aulas: [
+      { n: '15', data: '2026-12-15', tema: 'springdoc, anotações e Bearer no Swagger UI', tag: false },
+      { n: '16', data: '2026-12-17', tema: 'Tour pelo checklist da 3ª entrega', tag: false }
+    ] },
+
+  { id: '09', fase: 4, instrutor: 'david', emoji: '&#x1F680;',
+    titulo: 'Desenvolvimento de Projeto',
+    desc: 'Erros comuns dos projetos corrigidos ao vivo e a demonstração final do Task Manager.',
+    pronto: false, pagina: 'assunto09/index.html',
+    release: { versao: 'v1.0.0', marco: 'Entrega final', publicada: false },
+    aulas: [
+      { n: '17', data: '2027-01-05', tema: 'Erros comuns nos projetos, corrigidos ao vivo', tag: false,
+        links: [{ nome: 'demo/erros-comuns', url: REPO_TASKMANAGER + '/tree/demo/erros-comuns', publicado: false }] },
+      { n: '18', data: '2027-01-07', tema: 'Demonstração ponta a ponta', tag: false }
+    ] }
+];
+
+/* ===================================================================== */
+
+const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+
+function hojeISO() {
+  // Prévia de outra data: index.html?data=2026-11-17
+  const p = new URLSearchParams(location.search).get('data');
+  if (p && /^\d{4}-\d{2}-\d{2}$/.test(p)) return { iso: p, simulada: true };
+  const iso = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Fortaleza', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  return { iso, simulada: false };
+}
+
+function fmtPeriodo(a, b) {
+  const [ya, ma, da] = a.split('-').map(Number);
+  const [yb, mb, db] = b.split('-').map(Number);
+  if (ma === mb && ya === yb) return `${String(da).padStart(2,'0')} e ${String(db).padStart(2,'0')} ${MESES[mb-1]} ${yb}`;
+  return `${String(da).padStart(2,'0')} ${MESES[ma-1]} e ${String(db).padStart(2,'0')} ${MESES[mb-1]} ${yb}`;
+}
+function fmtCurta(iso) { const [, m, d] = iso.split('-'); return `${d}/${m}`; }
+function diasEntre(a, b) { return Math.round((Date.parse(b + 'T12:00:00') - Date.parse(a + 'T12:00:00')) / 86400000); }
+const inicioDe = a => a.aulas[0].data;
+const fimDe = a => a.aulas[a.aulas.length - 1].data;
+
+function statusDe(a, hoje) {
+  if (hoje < inicioDe(a)) return 'bloqueado';
+  if (hoje <= fimDe(a)) return 'atual';
+  return 'concluido';
+}
+
+function renderAulas(a, st, hoje) {
+  const projetoUrl = (a.projeto && a.projeto.url) || REPO_TASKMANAGER;
+  return '<ul class="aulas">' + a.aulas.map(au => {
+    const cls = hoje > au.data ? 'feita' : hoje === au.data ? 'hoje' : '';
+    let extra = '';
+    if (st !== 'bloqueado' && au.tag) extra += `<a class="tag-link" href="${projetoUrl}/tree/aula-${au.n}" target="_blank" rel="noopener">&#x1F3F7; aula-${au.n}</a>`;
+    if (st !== 'bloqueado' && au.links) au.links.filter(l => l.publicado !== false)
+      .forEach(l => { extra += `<a class="tag-link" href="${l.url}" target="_blank" rel="noopener">&#x2387; ${l.nome}</a>`; });
+    return `<li class="aula-n ${cls}"><b>Aula ${au.n}</b>${au.tema}<span class="quando">${fmtCurta(au.data)}</span>${extra}</li>`;
+  }).join('') + '</ul>';
+}
+
+function render() {
+  const { iso: hoje, simulada } = hojeISO();
+  if (simulada) {
+    const b = document.getElementById('simBanner');
+    b.style.display = 'block';
+    b.textContent = `Modo prévia: exibindo o sumário como se hoje fosse ${fmtCurta(hoje)}/${hoje.slice(0,4)}.`;
+  }
+
+  const tl = document.getElementById('timeline');
+  let html = '', faseAtual = 0, liberados = 0;
+
+  ASSUNTOS.forEach(a => {
+    const prof = INSTRUTORES[a.instrutor];
+    if (a.fase !== faseAtual) {
+      faseAtual = a.fase;
+      html += `<div class="phase"><img src="${prof.avatar}" alt="" loading="lazy"/>Fase ${a.fase} <span class="phase-who">com ${prof.nome}</span></div>`;
+    }
+
+    const st = statusDe(a, hoje);
+    if (st !== 'bloqueado') liberados++;
+    const nodeIcon = st === 'concluido' ? '&#x2713;' : st === 'bloqueado' ? '&#x1F512;' : '';
+
+    let pills = '';
+    if (st === 'atual') pills = '<span class="pill pill-grad">Esta semana</span>';
+    else if (st === 'concluido') pills = '<span class="pill pill-green">Concluído</span>';
+    else pills = '<span class="pill pill-gray">Bloqueado</span>';
+    if (a.release) {
+      const r = a.release;
+      const txt = `&#x1F3C1; ${r.versao}`;
+      pills = (r.publicada
+        ? `<a class="release-link" href="${REPO_TASKMANAGER}/releases/tag/${r.versao}" target="_blank" rel="noopener" title="${r.marco}"><span class="pill pill-blue">${txt}</span></a>`
+        : `<span class="pill pill-gray" title="${r.marco}">${txt}</span>`) + ' ' + pills;
+    }
+
+    let actions = '';
+    if (st === 'bloqueado') {
+      const faltam = diasEntre(hoje, inicioDe(a));
+      actions = `<span class="lock-msg">&#x1F512; Libera em ${fmtCurta(inicioDe(a))} &middot; ${faltam === 1 ? 'falta 1 dia' : `faltam ${faltam} dias`}</span>`;
+    } else if (!a.pronto) {
+      actions = `<span class="pill pill-amber">&#x1F6A7; Conteúdo em preparação</span>`;
+    } else {
+      const ext = a.externo ? ' target="_blank" rel="noopener"' : '';
+      const rot = a.externo ? '&#x25B6; Acessar conteúdo (simulador anterior)' : '&#x25B6; Acessar conteúdo';
+      actions = `<a class="entry-link" href="${a.pagina}"${ext}>${rot}</a>`;
+    }
+    if (st !== 'bloqueado') {
+      const proj = a.projeto || { nome: 'taskmanager-api', url: REPO_TASKMANAGER };
+      actions += `<a class="ghost-link" href="${proj.url}" target="_blank" rel="noopener">&#x2387; Projeto ${proj.nome}</a>`;
+    }
+
+    html += `
+      <div class="item ${st}" id="assunto${a.id}">
+        <div class="node" aria-hidden="true">${nodeIcon}</div>
+        <div class="aula">
+          <div class="aula-top">
+            <span class="aula-date">${fmtPeriodo(inicioDe(a), fimDe(a))}</span>
+            <span>${pills}</span>
+          </div>
+          <div class="aula-title">${a.emoji} ${a.id} &middot; ${a.titulo}</div>
+          <div class="aula-desc">${a.desc}</div>
+          ${renderAulas(a, st, hoje)}
+          <div class="aula-actions">${actions}</div>
+        </div>
+      </div>`;
+  });
+
+  tl.innerHTML = html;
+
+  document.getElementById('progressLabel').textContent = `${liberados} de ${ASSUNTOS.length} assuntos liberados`;
+  requestAnimationFrame(() => {
+    document.getElementById('progressFill').style.width = `${(liberados / ASSUNTOS.length) * 100}%`;
+  });
+
+  document.getElementById('instrutores').innerHTML = Object.values(INSTRUTORES)
+    .map(p => `<a href="${p.github}" target="_blank" rel="noopener"><img src="${p.avatar}" alt=""/>${p.nome}</a>`).join('');
+}
+
+document.addEventListener('DOMContentLoaded', render);
+</script>
+</body>
 </html>
