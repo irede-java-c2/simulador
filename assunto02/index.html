@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Java &mdash; Assunto 02 &mdash; Relacionamentos entre Entidades</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:          #f0f0f5;
+  --surface:     #ffffff;
+  --border:      #d8d5e8;
+  --accent:      #8d62ff;
+  --accent2:     #00c896;
+  --text:        #1a1730;
+  --muted:       #7a748f;
+  --green:       #155e35;
+  --green-bg:    #d6f5e5;
+  --green-border:#6edaa8;
+  --red:         #7a1f1f;
+  --red-bg:      #fde8e8;
+  --red-border:  #f0a0a0;
+  --radius:      10px;
+  --glow:        0 0 18px rgba(141,98,255,0.15);
+  --grad:        linear-gradient(270deg, #8d62ff 53.6%, #00ffbc 98.32%);
+  --surface2:    #f7f5ff;
+  --mint:        #00c896;
+  --danger:      #d63030;
+  --warn:        #d48a00;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+  padding: 0 0 60px;
+  background-image:
+    radial-gradient(ellipse 70% 40% at 50% -10%, rgba(141,98,255,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 30% at 80% 110%, rgba(0,200,150,0.06) 0%, transparent 70%);
+}
+header {
+  text-align: center;
+  padding: 36px 20px 28px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  background: var(--surface);
+  box-shadow: 0 2px 16px rgba(141,98,255,0.07);
+}
+header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 2px;
+  background: linear-gradient(90deg, transparent, #8d62ff, transparent);
+}
+.header-logo { height: 48px; margin-bottom: 14px; display: block; margin-left: auto; margin-right: auto; }
+.logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  background: var(--grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.logo span { opacity: 0.6; }
+.subtitle { color: var(--muted); font-size: .85rem; margin-top: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+.header-badge {
+  display: inline-block; margin-top: 12px; padding: 4px 16px; border-radius: 99px;
+  font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace;
+  background: linear-gradient(270deg, rgba(141,98,255,.15), rgba(0,255,188,.1));
+  border: 1px solid rgba(141,98,255,.3); color: var(--accent); letter-spacing: .06em;
+}
+.wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+/* ── AULA TABS ── */
+.aula-bar {
+  display: flex; gap: 4px; margin-bottom: 1.5rem;
+  background: var(--text); border-radius: 14px; padding: 6px;
+  box-shadow: 0 4px 20px rgba(26,23,48,0.18);
+}
+.aula-tab {
+  flex: 1; padding: 12px 20px; border-radius: 10px; border: none;
+  background: transparent; color: rgba(255,255,255,0.45); cursor: pointer;
+  font-size: 14px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+  transition: all .2s; letter-spacing: .02em;
+}
+.aula-tab.active { background: var(--grad); color: #fff; box-shadow: 0 2px 14px rgba(141,98,255,.45); }
+.aula-section { display: none; }
+.aula-section.active { display: block; }
+
+/* ── INNER TABS ── */
+.tab-bar {
+  display: flex; gap: 6px; margin-bottom: 1.5rem; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 14px; padding: 6px;
+  flex-wrap: wrap; box-shadow: 0 2px 10px rgba(141,98,255,0.06);
+}
+.tab {
+  flex: 1; min-width: 120px; padding: 9px 16px; border-radius: var(--radius);
+  border: none; background: transparent; color: var(--muted); cursor: pointer;
+  font-size: 13px; font-weight: 500; font-family: 'Space Grotesk', sans-serif; transition: all .2s;
+}
+.tab:hover:not(.active) { background: rgba(141,98,255,.08); color: var(--text); }
+.tab.active { background: var(--grad); color: #fff; font-weight: 700; box-shadow: 0 2px 12px rgba(141,98,255,.3); }
+.section { display: none; }
+.section.active { display: block; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.5rem; margin-bottom: 1.25rem; position: relative; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(141,98,255,.35), transparent);
+}
+.card-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700;
+  margin-bottom: 1rem; display: flex; align-items: center; gap: 10px; color: var(--text); flex-wrap: wrap;
+}
+.card p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+/* ── PILLS ── */
+.pill { display: inline-block; padding: 3px 11px; border-radius: 99px; font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.pill-grad  { background: rgba(141,98,255,.12); border: 1px solid rgba(141,98,255,.3);  color: var(--accent); }
+.pill-green { background: rgba(0,200,150,.12);  border: 1px solid rgba(0,200,150,.3);   color: #0a7a5a; }
+.pill-red   { background: rgba(214,48,48,.1);   border: 1px solid rgba(214,48,48,.25);  color: var(--danger); }
+.pill-amber { background: rgba(212,138,0,.1);   border: 1px solid rgba(212,138,0,.25);  color: var(--warn); }
+.pill-blue  { background: rgba(141,98,255,.12); border: 1px solid rgba(141,98,255,.25); color: #5a30cc; }
+.pill-java  { background: rgba(248,152,32,.12); border: 1px solid rgba(248,152,32,.35); color: #9a5000; }
+
+/* ── TABLE ── */
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+th {
+  background: rgba(141,98,255,.1); padding: 10px 14px; text-align: center;
+  font-weight: 700; font-size: 12px; color: var(--accent);
+  font-family: 'JetBrains Mono', monospace; letter-spacing: .05em; border-bottom: 1px solid var(--border);
+}
+td { padding: 10px 14px; text-align: center; border-bottom: 1px solid rgba(141,98,255,.08); font-size: 13px; font-family: 'JetBrains Mono', monospace; }
+td.left { text-align: left; font-family: 'Space Grotesk', sans-serif; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(141,98,255,.04); }
+
+/* ── CODE BLOCK ── */
+.code-block {
+  background: #1e1e2e; border: 1px solid #3a3a5c; border-radius: 10px;
+  padding: 16px 18px; margin: 12px 0; font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; line-height: 1.8; color: #cdd6f4; overflow-x: auto; white-space: pre;
+}
+.code-block .kw  { color: #cba6f7; }
+.code-block .typ { color: #89b4fa; }
+.code-block .str { color: #a6e3a1; }
+.code-block .num { color: #fab387; }
+.code-block .cmt { color: #6c7086; font-style: italic; }
+.code-block .cls { color: #f5c2e7; }
+.code-block .mtd { color: #89dceb; }
+.code-block .ann { color: #f9e2af; }
+
+/* ── SCORE BAR ── */
+.score-bar-area {
+  display: flex; align-items: center; gap: 16px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 18px; margin-bottom: 1.25rem; box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.score-val {
+  font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+  background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.score-label { font-size: 11px; color: var(--muted); }
+.score-track { flex: 1; background: #e5e2f0; border-radius: 99px; height: 8px; overflow: hidden; }
+.score-fill { height: 100%; border-radius: 99px; background: var(--grad); width: 0%; transition: width .4s cubic-bezier(.4,0,.2,1); }
+
+/* ── EXERCISES ── */
+.ex-block {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.25rem; margin-bottom: 1rem; border-left: 3px solid var(--accent);
+  transition: border-left-color .2s; box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.ex-block.done { border-left-color: var(--accent2); }
+.ex-q { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text); line-height: 1.55; }
+.ex-scenario { font-size: 13px; color: var(--muted); margin-bottom: 14px; line-height: 1.55; }
+.choices { display: flex; gap: 8px; flex-wrap: wrap; }
+.choice {
+  padding: 9px 20px; border-radius: 7px; border: 1.5px solid var(--border);
+  background: transparent; color: var(--text); cursor: pointer;
+  font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 600; transition: all .15s;
+}
+.choice:hover:not(:disabled) { background: rgba(141,98,255,.08); border-color: var(--accent); }
+.choice:disabled { cursor: default; }
+.choice.correct { background: var(--green-bg); color: #0a7a5a; border-color: var(--green-border); }
+.choice.wrong   { background: var(--red-bg);   color: var(--danger); border-color: var(--red-border); }
+.feedback { font-size: 13px; margin-top: 12px; padding: 10px 14px; border-radius: var(--radius); display: none; line-height: 1.6; }
+.feedback.show { display: block; }
+.feedback.ok { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.feedback.ko { background: var(--red-bg);   color: var(--red);   border: 1px solid var(--red-border); }
+
+/* ── CURIOSIDADES ── */
+.curi-item { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid rgba(141,98,255,.1); }
+.curi-item:last-of-type { border-bottom: none; }
+.curi-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+  background: linear-gradient(270deg, rgba(141,98,255,.15), rgba(0,200,150,.1));
+  border: 1px solid rgba(141,98,255,.25);
+}
+.curi-title { font-size: 14px; font-weight: 700; font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; color: var(--text); }
+.curi-body { font-size: 13px; color: var(--muted); line-height: 1.65; }
+.curi-body code { background: rgba(141,98,255,.12); color: #5a30cc; padding: 1px 6px; border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+
+/* ── LINKS ── */
+.link-item {
+  color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  text-decoration: none; word-break: break-all; transition: color .15s;
+}
+.link-item:hover { color: var(--mint); text-decoration: underline; }
+
+/* ── GRAD BTN ── */
+.grad-btn {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 14px;
+  padding: 10px 22px; border-radius: 8px; background: var(--grad); color: #fff;
+  border: none; cursor: pointer; font-size: 13px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace; text-decoration: none;
+  transition: opacity .2s, transform .15s; box-shadow: 0 3px 14px rgba(141,98,255,.3);
+}
+.grad-btn:hover { opacity: .88; transform: translateY(-1px); }
+
+/* ── INLINE CODE ── */
+.ic { background: rgba(141,98,255,.12); color: #5a30cc; padding: 1px 7px; border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+
+/* ── TIMELINE ── */
+.timeline-item { display: grid; grid-template-columns: 160px 1fr; gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(141,98,255,.1); }
+.timeline-item:last-child { border-bottom: none; }
+.timeline-era { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--accent); line-height: 1.5; }
+.timeline-body { font-size: 13px; color: var(--muted); line-height: 1.65; }
+.timeline-body strong { color: var(--text); }
+
+/* ── TYPE PICKER (SIMULADOR) ── */
+.type-btns { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 14px; }
+.type-btn {
+  padding: 8px 16px; border-radius: 99px; border: 1.5px solid var(--border);
+  background: transparent; font-size: 12px; font-weight: 700; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace; color: var(--muted); transition: all .15s;
+}
+.type-btn:hover { border-color: var(--accent); color: var(--text); }
+.type-btn.active { background: var(--grad); color: #fff; border-color: transparent; box-shadow: 0 2px 10px rgba(141,98,255,.3); }
+
+.output-block {
+  background: #12121e; border: 1px solid #2a2a40; border-radius: 8px;
+  padding: 14px 18px; margin-top: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.8;
+  color: #a6e3a1; overflow-x: auto; white-space: pre;
+}
+.output-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  color: var(--muted); letter-spacing: .07em; text-transform: uppercase;
+  margin: 12px 0 4px;
+}
+.warn-block {
+  background: rgba(212,138,0,.08); border: 1px solid rgba(212,138,0,.25); border-radius: 8px;
+  padding: 10px 14px; margin-top: 10px; font-size: 12px; color: var(--warn); line-height: 1.6;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── STEPPER (SIMULADOR) ── */
+.stepper { display: flex; gap: 4px; flex-wrap: wrap; margin: 4px 0 14px; }
+.step-btn {
+  flex: 1; min-width: 90px; padding: 10px 8px; border-radius: 8px; border: 1.5px solid var(--border);
+  background: transparent; font-size: 11px; font-weight: 700; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace; color: var(--muted); transition: all .15s; text-align: center;
+}
+.step-btn:hover { border-color: var(--accent); color: var(--text); }
+.step-btn.active { background: var(--grad); color: #fff; border-color: transparent; box-shadow: 0 2px 10px rgba(141,98,255,.3); }
+.step-btn.past { border-color: var(--accent2); color: #0a7a5a; }
+
+footer { text-align: center; margin-top: 3rem; font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+footer span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; }
+
+@media (max-width: 600px) {
+  .tab { min-width: 80px; font-size: 12px; }
+  .timeline-item { grid-template-columns: 1fr; gap: 4px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <img class="header-logo" src="https://capacitabrasil.irede.org.br/assets/capacitaLogo-Ct3BEyem.png" alt="Capacita Brasil"/>
+  <div class="logo">&#x2615; <span>//</span> Java</div>
+  <div class="subtitle">Desenvolvimento Java &mdash; Aula Interativa</div>
+  <div class="header-badge">Assunto 02 &mdash; Aulas 03 e 04 &mdash; Relacionamentos entre Entidades</div>
+</header>
+
+<div class="wrap">
+
+  <a href="../index.html#assunto02" style="display:inline-block;margin-bottom:1rem;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--muted);text-decoration:none">&#x2190; Voltar ao Sumário</a>
+
+  <div class="aula-bar">
+    <button class="aula-tab active">&#x1F4C5; 03 e 05/11 &mdash; Relacionamentos entre Entidades</button>
+  </div>
+
+  <div id="aula01" class="aula-section active">
+
+  <div class="tab-bar">
+    <button class="tab active"  onclick="showTab('resumo1',this)">&#x1F4D8; Resumo</button>
+    <button class="tab"         onclick="showTab('simulador1',this)">&#x26A1; Simulador</button>
+    <button class="tab"         onclick="showTab('exercicios1',this)">&#x1F3AF; Exercícios</button>
+    <button class="tab"         onclick="showTab('questionarios1',this)">&#x1F4DD; Questionários</button>
+    <button class="tab"         onclick="showTab('curiosidades1',this)">&#x1F680; Curiosidades</button>
+    <button class="tab"         onclick="showTab('links1',this)">&#x1F517; Links</button>
+  </div>
+
+  <!-- ═══ RESUMO ═══ -->
+  <div id="resumo1" class="section active">
+
+    <!-- Card 1: O que vamos construir -->
+    <div class="card">
+      <div class="card-title">&#x1F3AF; O que vamos construir <span class="pill pill-grad">Task Manager API</span></div>
+      <p>Nas aulas 01 e 02 você aprendeu ORM no projeto <span class="ic">loja</span>, com JPA e Hibernate puros e a entidade <span class="ic">Produto</span>. A partir de agora, o projeto da turma é o <strong style="color:var(--text)">Task Manager API</strong>: uma API de tarefas feita com <strong style="color:var(--text)">Spring Boot 3 + Spring Data JPA + PostgreSQL</strong>, que vai crescer aula a aula até a entrega final.</p>
+      <table>
+        <tr><th>Aula</th><th>O que entra no projeto</th><th>Tag</th></tr>
+        <tr><td>03 &middot; 03/11</td><td class="left"><strong>Parte 1 (implementação rápida):</strong> criar o projeto Spring Boot conectado ao PostgreSQL, mapear <span class="ic">Tarefa</span> e o enum <span class="ic">Prioridade</span>, criar o <span class="ic">TarefaRepository</span> e um <span class="ic">CommandLineRunner</span> de demonstração.<br/><strong>Parte 2 (assunto novo):</strong> criar a entidade <span class="ic">Usuario</span> e a relação <strong>1:N</strong> com <span class="ic">Tarefa</span>.</td><td><span class="ic">aula-03</span></td></tr>
+        <tr><td>04 &middot; 05/11</td><td class="left">Criar a entidade <span class="ic">Etiqueta</span> e a relação <strong>N:N</strong> com <span class="ic">Tarefa</span>; revisar <strong>fetch</strong> e <strong>cascade</strong> das relações.</td><td><span class="ic">aula-04</span></td></tr>
+      </table>
+      <p style="margin-top:6px">Ao fim da semana, o domínio fica assim:</p>
+      <div class="code-block"><span class="cls">Usuario</span> <span class="num">1</span> ──────── <span class="num">N</span> <span class="cls">Tarefa</span> <span class="num">N</span> ──────── <span class="num">N</span> <span class="cls">Etiqueta</span>
+                       │
+                       └── <span class="typ">Prioridade</span> (enum: BAIXA, MEDIA, ALTA)
+
+<span class="cmt">tabelas no PostgreSQL (banco taskmanager):</span>
+usuarios ── tarefas (usuario_id) ── tarefa_etiqueta ── etiquetas</div>
+      <div class="warn-block">&#x1F4CC; O repositório oficial começa nesta semana: a primeira tag é <strong>aula-03</strong>. Não existem as tags aula-01 e aula-02, porque essas aulas usaram o projeto loja.</div>
+    </div>
+
+    <!-- Card 2: Ponte -->
+    <div class="card">
+      <div class="card-title">&#x1F309; Do Hibernate puro ao Spring Boot <span class="pill pill-java">Revisão rápida</span></div>
+      <p>A teoria de ORM é a mesma das aulas 01 e 02: <strong style="color:var(--text)">as anotações continuam vindo de <span class="ic">jakarta.persistence</span></strong> e o Hibernate continua gerando o SQL. O que muda é <strong style="color:var(--text)">quem cuida da infraestrutura</strong>: no <span class="ic">loja</span> era você; no Task Manager é o Spring Boot.</p>
+      <table>
+        <tr><th>Tema</th><th>loja (Hibernate puro)</th><th>taskmanager-api (Spring Boot)</th></tr>
+        <tr><td class="left">Entidade</td><td><span class="ic">Produto</span></td><td><span class="ic">Tarefa</span></td></tr>
+        <tr><td class="left">Configuração</td><td><span class="ic">persistence.xml</span></td><td><span class="ic">application.properties</span></td></tr>
+        <tr><td class="left">Acesso ao banco</td><td><span class="ic">EntityManagerFactory</span> + <span class="ic">EntityManager</span> criados à mão</td><td><span class="ic">JpaRepository</span> injetado pelo Spring</td></tr>
+        <tr><td class="left">Transação</td><td><span class="ic">begin()</span> / <span class="ic">commit()</span> / <span class="ic">rollback()</span></td><td>gerenciada pelo Spring (<span class="ic">@Transactional</span>)</td></tr>
+        <tr><td class="left">Ponto de entrada</td><td><span class="ic">main</span> com o código de teste</td><td><span class="ic">CommandLineRunner</span></td></tr>
+        <tr><td class="left">Banco</td><td>MySQL</td><td>PostgreSQL</td></tr>
+      </table>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">Criação do projeto</strong>: Spring Initializr (<span class="ic">start.spring.io</span>) com Maven, Java 25, Spring Boot 3.5.x, <span class="ic">groupId</span> <span class="ic">br.org.irede</span>, <span class="ic">artifactId</span> <span class="ic">taskmanagerapi</span> e as dependências <strong style="color:var(--text)">Spring Data JPA</strong> e <strong style="color:var(--text)">PostgreSQL Driver</strong>. Depois é só abrir a pasta no NetBeans (<em>File &rarr; Open Project</em>).</p>
+      <div class="output-label">src/main/resources/application.properties</div>
+      <div class="code-block">spring.application.name=<span class="str">taskmanagerapi</span>
+
+<span class="cmt"># conexão com o PostgreSQL (substitui o persistence.xml)</span>
+spring.datasource.url=<span class="str">jdbc:postgresql://localhost:5432/taskmanager</span>
+spring.datasource.username=<span class="str">postgres</span>
+spring.datasource.password=<span class="str">postgres</span>
+
+<span class="cmt"># Hibernate: cria/atualiza as tabelas e mostra o SQL no console</span>
+spring.jpa.hibernate.ddl-auto=<span class="str">update</span>
+spring.jpa.show-sql=<span class="str">true</span></div>
+      <div class="output-label">A mesma operação nos dois mundos</div>
+      <div class="code-block"><span class="cmt">// loja — você abre, controla a transação e fecha</span>
+<span class="typ">EntityManager</span> em = <span class="cls">JPAUtil</span>.<span class="mtd">getEntityManager</span>();
+em.<span class="mtd">getTransaction</span>().<span class="mtd">begin</span>();
+em.<span class="mtd">persist</span>(<span class="kw">new</span> <span class="cls">Produto</span>(<span class="str">"Caneta"</span>, <span class="num">1.99</span>));
+em.<span class="mtd">getTransaction</span>().<span class="mtd">commit</span>();
+em.<span class="mtd">close</span>();
+
+<span class="cmt">// taskmanager-api — o Spring entrega o repositório pronto</span>
+tarefaRepository.<span class="mtd">save</span>(<span class="kw">new</span> <span class="cls">Tarefa</span>(<span class="str">"Estudar JPA"</span>, <span class="typ">Prioridade</span>.ALTA));</div>
+      <div class="output-label">TarefaRepository.java — uma interface, nenhuma implementação</div>
+      <div class="code-block"><span class="kw">package</span> br.org.irede.taskmanagerapi.repository;
+
+<span class="kw">import</span> br.org.irede.taskmanagerapi.model.Tarefa;
+<span class="kw">import</span> org.springframework.data.jpa.repository.JpaRepository;
+
+<span class="kw">public interface</span> <span class="cls">TarefaRepository</span> <span class="kw">extends</span> <span class="typ">JpaRepository</span>&lt;<span class="cls">Tarefa</span>, <span class="typ">Long</span>&gt; {
+    <span class="cmt">// save, findById, findAll, deleteById, count... já vêm prontos</span>
+}</div>
+      <div class="warn-block">&#x1F4A1; O Spring Boot cria o EntityManagerFactory a partir do application.properties e gera, em tempo de execução, uma classe que implementa o TarefaRepository. Cada método do repositório já roda dentro de uma transação. Você vê tudo isso na prática no simulador "Mesma operação nos dois mundos".</div>
+    </div>
+
+    <!-- Card 3: Mapeamento de Relações -->
+    <div class="card">
+      <div class="card-title">&#x1F517; Mapeamento de Relações <span class="pill pill-blue">Aula 03</span></div>
+      <p>No mundo real, os objetos <strong style="color:var(--text)">raramente existem de forma isolada</strong>. Um <strong style="color:var(--text)">Cliente</strong> faz vários <strong style="color:var(--text)">Pedidos</strong>; um Pedido pertence a um único Cliente. Essa é a essência do relacionamento <strong style="color:var(--text)">um-para-muitos (1:N)</strong>, a associação mais comum em sistemas de software.</p>
+      <p style="margin-top:10px">No Task Manager, a mesma ideia aparece entre <span class="ic">Usuario</span> e <span class="ic">Tarefa</span>:</p>
+      <table>
+        <tr><th>Exemplo do slide</th><th>Task Manager</th><th>Cardinalidade</th></tr>
+        <tr><td class="left">Um Cliente faz vários Pedidos</td><td class="left">Um Usuario tem várias Tarefas</td><td>1:N</td></tr>
+        <tr><td class="left">Um Pedido pertence a um único Cliente</td><td class="left">Uma Tarefa pertence a um único Usuario</td><td>N:1</td></tr>
+      </table>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">1:N e N:1 são a mesma relação</strong>, vista de lados diferentes. Olhando do usuário, ele tem muitas tarefas; olhando da tarefa, ela tem um usuário.</p>
+      <p style="margin-top:6px">&#x1F539; No Task Manager <strong style="color:var(--text)">não existe entidade Projeto</strong>: as tarefas pertencem diretamente ao usuário.</p>
+    </div>
+
+    <!-- Card 4: O Conceito 1:N -->
+    <div class="card">
+      <div class="card-title">&#x1F500; O Conceito 1:N <span class="pill pill-blue">Aula 03</span> <span class="pill pill-grad">Objeto &times; Tabela</span></div>
+      <p>&#x1F539; <strong style="color:var(--text)">No paradigma de objetos</strong>: a relação é representada por um <strong style="color:var(--text)">atributo</strong>.</p>
+      <p>&#x1F539; <strong style="color:var(--text)">No paradigma relacional</strong>: a relação é mantida através de uma <strong style="color:var(--text)">chave estrangeira (Foreign Key)</strong>.</p>
+      <p>&#x1F539; O trabalho do <strong style="color:var(--text)">ORM</strong> é conectar esses dois mundos usando <strong style="color:var(--text)">anotações</strong>.</p>
+      <div class="code-block"><span class="cmt">// Mundo dos objetos: referências</span>
+<span class="cls">Tarefa</span>  ──── usuario ────&gt;  <span class="cls">Usuario</span>
+<span class="cls">Usuario</span> ──── tarefas ────&gt;  <span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt;
+
+<span class="cmt">-- Mundo relacional: uma coluna FK no lado "muitos"</span>
+usuarios             tarefas
+┌────┬──────┐        ┌────┬─────────────┬─────────────────┐
+│ id │ nome │        │ id │ titulo      │ usuario_id (FK) │
+├────┼──────┤        ├────┼─────────────┼─────────────────┤
+│ <span class="num">1</span>  │ Ana  │ &lt;───── │ <span class="num">1</span>  │ Estudar JPA │ <span class="num">1</span>               │
+│    │      │ &lt;───── │ <span class="num">2</span>  │ Revisar PR  │ <span class="num">1</span>               │
+└────┴──────┘        └────┴─────────────┴─────────────────┘</div>
+      <p style="margin-top:10px">Repare na assimetria: <strong style="color:var(--text)">no Java a relação pode existir dos dois lados</strong> (o usuário conhece sua lista e a tarefa conhece seu usuário), mas <strong style="color:var(--text)">no banco existe uma única coluna</strong>, <span class="ic">tarefas.usuario_id</span>. A FK sempre fica na tabela do lado <strong style="color:var(--text)">"muitos"</strong>.</p>
+      <div class="warn-block">&#x1F4D0; O slide traz o diagrama entidade-relacionamento "FUNCIONÁRIO — TRABALHA EM — DEPARTAMENTO" (1:N), do artigo citado nos Links. No Task Manager, o mesmo desenho seria: USUARIO — POSSUI — TAREFA.</div>
+    </div>
+
+    <!-- Card 5: Anotações-Chave -->
+    <div class="card">
+      <div class="card-title">&#x1F3F7; Anotações-Chave: @ManyToOne e @OneToMany <span class="pill pill-blue">Aula 03</span></div>
+      <table>
+        <tr><th>Anotação</th><th>Onde usar</th><th>O que faz</th></tr>
+        <tr><td><span class="ic">@ManyToOne</span><br/>(Muitos-para-Um)</td><td class="left">Na classe que representa o lado <strong>"muitos"</strong> da relação.</td><td class="left">Anotada sobre o atributo que representa a <strong>referência única ao "pai"</strong> (ex.: <span class="ic">private Cliente cliente;</span>).</td></tr>
+        <tr><td><span class="ic">@OneToMany</span><br/>(Um-para-Muitos)</td><td class="left">Na classe que representa o lado <strong>"um"</strong> da relação.</td><td class="left">Anotada sobre a <strong>coleção de entidades filhas</strong> (ex.: <span class="ic">private List&lt;Pedido&gt; pedidos;</span>).</td></tr>
+      </table>
+      <div class="output-label">Tarefa.java — lado "muitos" (lado dono)</div>
+      <div class="code-block"><span class="ann">@Entity</span>
+<span class="ann">@Table</span>(name = <span class="str">"tarefas"</span>)
+<span class="kw">public class</span> <span class="cls">Tarefa</span> {
+    <span class="cmt">// id, titulo, descricao, prioridade, prazo, concluida...</span>
+
+    <span class="ann">@ManyToOne</span>
+    <span class="ann">@JoinColumn</span>(name = <span class="str">"usuario_id"</span>, nullable = <span class="kw">false</span>)
+    <span class="kw">private</span> <span class="cls">Usuario</span> usuario;   <span class="cmt">// referência única ao "pai"</span>
+}</div>
+      <div class="output-label">Usuario.java — lado "um" (lado inverso)</div>
+      <div class="code-block"><span class="ann">@Entity</span>
+<span class="ann">@Table</span>(name = <span class="str">"usuarios"</span>)
+<span class="kw">public class</span> <span class="cls">Usuario</span> {
+
+    <span class="ann">@Id</span>
+    <span class="ann">@GeneratedValue</span>(strategy = <span class="typ">GenerationType</span>.IDENTITY)
+    <span class="kw">private</span> <span class="typ">Long</span> id;
+
+    <span class="ann">@Column</span>(nullable = <span class="kw">false</span>)
+    <span class="kw">private</span> <span class="typ">String</span> nome;
+
+    <span class="ann">@Column</span>(nullable = <span class="kw">false</span>, unique = <span class="kw">true</span>)
+    <span class="kw">private</span> <span class="typ">String</span> email;
+
+    <span class="ann">@OneToMany</span>(mappedBy = <span class="str">"usuario"</span>)
+    <span class="kw">private</span> <span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; tarefas = <span class="kw">new</span> <span class="typ">ArrayList</span>&lt;&gt;();   <span class="cmt">// coleção de filhas</span>
+}</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">Lado dono</strong>: é o lado que tem a FK, aqui <span class="ic">Tarefa.usuario</span>. Só ele decide o valor de <span class="ic">usuario_id</span> no banco. A anotação <span class="ic">@JoinColumn</span> dá nome à coluna (sem ela, o padrão também seria <span class="ic">usuario_id</span>: nome do atributo + <span class="ic">_</span> + nome da PK).</p>
+      <p style="margin-top:6px">&#x1F539; <strong style="color:var(--text)">Lado inverso</strong>: usa <span class="ic">mappedBy = "usuario"</span>, o <strong style="color:var(--text)">nome do atributo</strong> do outro lado (não o nome da coluna). Ele diz ao Hibernate: "esta lista é um espelho; a FK já está mapeada em <span class="ic">Tarefa.usuario</span>".</p>
+      <div class="output-label">SQL gerado no console (show-sql)</div>
+      <div class="output-block">Hibernate: create table usuarios (id bigint generated by default as identity, email varchar(255) not null, nome varchar(255) not null, primary key (id))
+Hibernate: create table tarefas (concluida boolean not null, prazo date, id bigint generated by default as identity, usuario_id bigint not null, descricao varchar(255), prioridade varchar(255) check (prioridade in ('BAIXA','MEDIA','ALTA')), titulo varchar(255) not null, primary key (id))
+Hibernate: alter table if exists usuarios drop constraint if exists UKkfsp0s1tflm1cwlj8idhqsad0
+Hibernate: alter table if exists usuarios add constraint UKkfsp0s1tflm1cwlj8idhqsad0 unique (email)
+Hibernate: alter table if exists tarefas add constraint FKp2d8qq1y6x3rjv0n5kwe7tb4l foreign key (usuario_id) references usuarios</div>
+      <div class="warn-block">&#x26A0; Se você esquecer o mappedBy, o Hibernate entende que existem DUAS relações independentes e cria uma tabela extra (usuarios_tarefas) para o @OneToMany. Sinal clássico de mapeamento errado: uma tabela que você não pediu aparecendo no console.</div>
+      <p style="margin-top:12px">&#x1F4BB; <strong style="color:var(--text)">Demonstração prática: relacionamento @OneToMany no NetBeans.</strong> Em aula, criamos <span class="ic">Usuario</span> no pacote <span class="ic">model</span>, geramos construtores, getters e setters com <span class="ic">Alt+Insert</span> (<em>Insert Code</em>), rodamos o projeto com <span class="ic">F6</span> (<em>Run Project</em>) e conferimos as tabelas criadas no PostgreSQL. <strong style="color:var(--text)">Material de apoio</strong>: os conteúdos complementares deste capítulo estão nas próximas seções da plataforma.</p>
+    </div>
+
+    <!-- Card 6: Mapeamento ManyToMany -->
+    <div class="card">
+      <div class="card-title">&#x1F578; Mapeamento ManyToMany <span class="pill pill-green">Aula 04</span> <span class="pill pill-grad">N:N</span></div>
+      <p><strong style="color:var(--text)">O conceito N:N</strong>:</p>
+      <p>&#x1F539; Um relacionamento N:N <strong style="color:var(--text)">não pode ser representado diretamente</strong>;</p>
+      <p>&#x1F539; É necessária uma <strong style="color:var(--text)">terceira tabela</strong>, conhecida como <strong style="color:var(--text)">tabela de junção</strong> (ou tabela associativa/intermediária);</p>
+      <p>&#x1F539; Essa tabela contém, <strong style="color:var(--text)">no mínimo, duas colunas de chave estrangeira</strong>.</p>
+      <p style="margin-top:10px">O slide usa <strong style="color:var(--text)">Autor &times; Livro</strong> (um autor escreve vários livros e um livro pode ter vários autores), com a tabela <span class="ic">AutorLivro(ID_AUTOR, ID_LIVRO)</span>. No Task Manager, a relação N:N é <strong style="color:var(--text)">Tarefa &times; Etiqueta</strong>: uma tarefa pode ter várias etiquetas ("estudo", "urgente") e uma etiqueta classifica várias tarefas.</p>
+      <div class="code-block">tarefas                  tarefa_etiqueta              etiquetas
+┌────┬─────────────┐     ┌───────────┬─────────────┐  ┌────┬─────────┐
+│ id │ titulo      │     │ tarefa_id │ etiqueta_id │  │ id │ nome    │
+├────┼─────────────┤     ├───────────┼─────────────┤  ├────┼─────────┤
+│ <span class="num">1</span>  │ Estudar JPA │     │ <span class="num">1</span>         │ <span class="num">1</span>           │  │ <span class="num">1</span>  │ estudo  │
+│ <span class="num">2</span>  │ Revisar PR  │     │ <span class="num">1</span>         │ <span class="num">2</span>           │  │ <span class="num">2</span>  │ urgente │
+└────┴─────────────┘     │ <span class="num">2</span>         │ <span class="num">2</span>           │  └────┴─────────┘
+                         └───────────┴─────────────┘
+<span class="cmt">-- "Estudar JPA" tem as etiquetas estudo e urgente; "Revisar PR" tem só urgente.</span></div>
+      <p style="margin-top:10px">Por que não dá para ter uma FK direto em <span class="ic">tarefas</span>? Porque uma coluna guarda <strong style="color:var(--text)">um único valor</strong>. Uma coluna <span class="ic">etiqueta_id</span> em <span class="ic">tarefas</span> permitiria só uma etiqueta por tarefa. Cada linha da tabela de junção representa <strong style="color:var(--text)">um par</strong> (tarefa, etiqueta).</p>
+    </div>
+
+    <!-- Card 7: @ManyToMany -->
+    <div class="card">
+      <div class="card-title">&#x1F3F7; Anotação-Chave: @ManyToMany <span class="pill pill-green">Aula 04</span></div>
+      <p>&#x1F539; <strong style="color:var(--text)">Onde usar</strong>: em <strong style="color:var(--text)">ambas as entidades</strong> da relação, sobre os atributos de coleção.</p>
+      <p>&#x1F539; <strong style="color:var(--text)">Lado dono</strong>: assim como na relação 1:N, precisamos definir um lado dono, que será responsável pela <strong style="color:var(--text)">configuração da tabela de junção</strong>. O outro lado será o <strong style="color:var(--text)">inverso</strong> e usará o <span class="ic">mappedBy</span>.</p>
+      <p>&#x1F539; <strong style="color:var(--text)">Customização com @JoinTable</strong>: usamos essa anotação no lado dono para configurar a tabela de junção.</p>
+      <div class="output-label">Tarefa.java — lado dono</div>
+      <div class="code-block"><span class="ann">@ManyToMany</span>
+<span class="ann">@JoinTable</span>(
+    name = <span class="str">"tarefa_etiqueta"</span>,                                <span class="cmt">// nome da tabela de junção</span>
+    joinColumns = <span class="ann">@JoinColumn</span>(name = <span class="str">"tarefa_id"</span>),            <span class="cmt">// FK para ESTE lado</span>
+    inverseJoinColumns = <span class="ann">@JoinColumn</span>(name = <span class="str">"etiqueta_id"</span>)    <span class="cmt">// FK para o OUTRO lado</span>
+)
+<span class="kw">private</span> <span class="typ">Set</span>&lt;<span class="cls">Etiqueta</span>&gt; etiquetas = <span class="kw">new</span> <span class="typ">HashSet</span>&lt;&gt;();</div>
+      <div class="output-label">Etiqueta.java — lado inverso</div>
+      <div class="code-block"><span class="ann">@Entity</span>
+<span class="ann">@Table</span>(name = <span class="str">"etiquetas"</span>)
+<span class="kw">public class</span> <span class="cls">Etiqueta</span> {
+
+    <span class="ann">@Id</span>
+    <span class="ann">@GeneratedValue</span>(strategy = <span class="typ">GenerationType</span>.IDENTITY)
+    <span class="kw">private</span> <span class="typ">Long</span> id;
+
+    <span class="ann">@Column</span>(nullable = <span class="kw">false</span>, unique = <span class="kw">true</span>, length = <span class="num">50</span>)
+    <span class="kw">private</span> <span class="typ">String</span> nome;
+
+    <span class="ann">@ManyToMany</span>(mappedBy = <span class="str">"etiquetas"</span>)
+    <span class="kw">private</span> <span class="typ">Set</span>&lt;<span class="cls">Tarefa</span>&gt; tarefas = <span class="kw">new</span> <span class="typ">HashSet</span>&lt;&gt;();
+}</div>
+      <div class="output-label">SQL gerado no console</div>
+      <div class="output-block">Hibernate: create table etiquetas (id bigint generated by default as identity, nome varchar(50) not null, primary key (id))
+Hibernate: create table tarefa_etiqueta (etiqueta_id bigint not null, tarefa_id bigint not null, primary key (etiqueta_id, tarefa_id))
+Hibernate: alter table if exists tarefa_etiqueta add constraint FK9c1xg3nqw0hb7jvo2ms5k8ldr foreign key (etiqueta_id) references etiquetas
+Hibernate: alter table if exists tarefa_etiqueta add constraint FKr4ty6s0m8ue2qa9xj1kh3wp7n foreign key (tarefa_id) references tarefas</div>
+      <p style="margin-top:10px">&#x1F539; Em N:N, a escolha do lado dono é sua. No Task Manager escolhemos <span class="ic">Tarefa</span>, porque é natural "colocar etiquetas em uma tarefa". Só alterações na coleção do lado dono (<span class="ic">tarefa.getEtiquetas()</span>) geram <span class="ic">INSERT</span>/<span class="ic">DELETE</span> na <span class="ic">tarefa_etiqueta</span>.</p>
+      <div class="warn-block">&#x1F4A1; Usamos Set em vez de List: com Set, a chave primária da tarefa_etiqueta é o par (etiqueta_id, tarefa_id), o que impede duplicatas, e remover uma etiqueta gera um único DELETE. Como Etiqueta vai para um HashSet, ela precisa de equals() e hashCode() bem feitos (veja Boas Práticas).</div>
+    </div>
+
+    <!-- Card 8: Cascateamento -->
+    <div class="card">
+      <div class="card-title">&#x1F30A; Cascateamento <span class="pill pill-green">Aula 04</span> <span class="pill pill-amber">cascade</span></div>
+      <p>&#x1F539; <strong style="color:var(--text)">O problema</strong>: salvar um Cliente <strong style="color:var(--text)">não salva automaticamente</strong> seus Pedidos associados. No Task Manager: salvar um <span class="ic">Usuario</span> novo não salva as tarefas novas da sua lista.</p>
+      <p>&#x1F539; <strong style="color:var(--text)">A solução</strong>: <span class="ic">cascade = CascadeType.PERSIST</span> (ou <span class="ic">ALL</span>).</p>
+      <div class="code-block"><span class="cmt">// Exemplo do slide — na classe Cliente</span>
+<span class="ann">@OneToMany</span>(mappedBy = <span class="str">"cliente"</span>, cascade = <span class="typ">CascadeType</span>.ALL)
+<span class="kw">private</span> <span class="typ">List</span>&lt;<span class="cls">Pedido</span>&gt; pedidos;
+
+<span class="cmt">// Task Manager — na classe Usuario</span>
+<span class="ann">@OneToMany</span>(mappedBy = <span class="str">"usuario"</span>, cascade = <span class="typ">CascadeType</span>.ALL, orphanRemoval = <span class="kw">true</span>)
+<span class="kw">private</span> <span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; tarefas = <span class="kw">new</span> <span class="typ">ArrayList</span>&lt;&gt;();</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">Com isso</strong>: <span class="ic">entityManager.persist(cliente);</span> agora salva o cliente <strong style="color:var(--text)">e</strong> todos os pedidos da lista. No Spring, <span class="ic">usuarioRepository.save(usuario)</span> chama o <span class="ic">persist</span> e salva o usuário e as tarefas.</p>
+      <table>
+        <tr><th>CascadeType</th><th>Propaga a operação...</th></tr>
+        <tr><td>PERSIST</td><td class="left">salvar um objeto novo (<span class="ic">persist</span>)</td></tr>
+        <tr><td>MERGE</td><td class="left">atualizar um objeto destacado (<span class="ic">merge</span>)</td></tr>
+        <tr><td>REMOVE</td><td class="left">apagar (<span class="ic">remove</span>)</td></tr>
+        <tr><td>REFRESH / DETACH</td><td class="left">recarregar do banco / desanexar do contexto</td></tr>
+        <tr><td>ALL</td><td class="left">todas as anteriores</td></tr>
+      </table>
+      <div class="warn-block">&#x26A0; Cuidado com CascadeType.REMOVE! Ele pode apagar dados em cadeia. Em Usuario.tarefas faz sentido (as tarefas pertencem ao usuário). Em Tarefa.etiquetas (N:N) seria um desastre: apagar uma tarefa apagaria a etiqueta "urgente" — que outras tarefas usam. Por isso, no N:N usamos só cascade = {CascadeType.PERSIST, CascadeType.MERGE}.</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">orphanRemoval = true</strong> (complemento): uma tarefa <strong style="color:var(--text)">retirada da lista</strong> com <span class="ic">usuario.removerTarefa(t)</span> vira "órfã" e é apagada do banco. Diferença: <span class="ic">REMOVE</span> age quando o <strong style="color:var(--text)">pai</strong> é apagado; <span class="ic">orphanRemoval</span> age quando o <strong style="color:var(--text)">filho sai da coleção</strong>.</p>
+    </div>
+
+    <!-- Card 9: Fetch -->
+    <div class="card">
+      <div class="card-title">&#x1F69A; Tipos de Carregamento (Fetch) <span class="pill pill-green">Aula 04</span> <span class="pill pill-blue">LAZY &times; EAGER</span></div>
+      <table>
+        <tr><th>FetchType.LAZY &mdash; padrão para coleções</th><th>FetchType.EAGER &mdash; padrão para referências únicas</th></tr>
+        <tr>
+          <td class="left">&#x1F539; Traz o Cliente, mas <strong>não</strong> os Pedidos.<br/>&#x1F539; Os Pedidos só são buscados do banco quando você os acessa (<span class="ic">cliente.getPedidos()</span>).<br/>&#x1F539; <strong>Vantagem: performance!</strong></td>
+          <td class="left">&#x1F539; Traz o Cliente <strong>e</strong> os Pedidos juntos (com uma consulta extra ou JOIN).<br/>&#x1F539; <strong>Desvantagem:</strong> pode ser lento e carregar dados desnecessários.</td>
+        </tr>
+      </table>
+      <p style="margin-top:6px">Os padrões da JPA, anotação por anotação:</p>
+      <table>
+        <tr><th>Anotação</th><th>Fetch padrão</th><th>No Task Manager</th></tr>
+        <tr><td>@OneToMany</td><td>LAZY</td><td class="left"><span class="ic">Usuario.tarefas</span> &mdash; mantém LAZY</td></tr>
+        <tr><td>@ManyToMany</td><td>LAZY</td><td class="left"><span class="ic">Tarefa.etiquetas</span> &mdash; mantém LAZY</td></tr>
+        <tr><td>@ManyToOne</td><td>EAGER</td><td class="left"><span class="ic">Tarefa.usuario</span> &mdash; <strong>trocamos para LAZY na aula 04</strong></td></tr>
+        <tr><td>@OneToOne</td><td>EAGER</td><td class="left">&mdash;</td></tr>
+      </table>
+      <div class="code-block"><span class="cmt">// Tarefa.java — revisão da aula 04</span>
+<span class="ann">@ManyToOne</span>(fetch = <span class="typ">FetchType</span>.LAZY)
+<span class="ann">@JoinColumn</span>(name = <span class="str">"usuario_id"</span>, nullable = <span class="kw">false</span>)
+<span class="kw">private</span> <span class="cls">Usuario</span> usuario;</div>
+      <div class="output-label">Com LAZY: o usuário só é buscado quando acessado</div>
+      <div class="output-block"><span style="color:#cdd6f4">Usuario ana = usuarioRepository.findById(1L).orElseThrow();</span>
+Hibernate: select u1_0.id,u1_0.email,u1_0.nome from usuarios u1_0 where u1_0.id=?
+<span style="color:#cdd6f4">ana.getTarefas().size();   // só agora a coleção é carregada</span>
+Hibernate: select t1_0.usuario_id,t1_0.id,t1_0.concluida,t1_0.descricao,t1_0.prazo,t1_0.prioridade,t1_0.titulo from tarefas t1_0 where t1_0.usuario_id=?</div>
+      <div class="warn-block">&#x1F4CC; Com EAGER em uma referência única (Tarefa.usuario, o padrão do @ManyToOne), buscar uma tarefa traz o usuário junto, por JOIN ou por um SELECT extra. Parece cômodo, mas ao listar 100 tarefas o Hibernate pode disparar um SELECT por usuário diferente: o problema N+1 (simulador "Laboratório de fetch").</div>
+    </div>
+
+    <!-- Card 10: Boas Práticas -->
+    <div class="card">
+      <div class="card-title">&#x2705; Boas Práticas <span class="pill pill-green">Aula 04</span> <span class="pill pill-grad">4 regras</span></div>
+      <p>&#x1F539; <strong style="color:var(--text)">1. Sincronize os dois lados</strong>: use métodos <strong style="color:var(--text)">add/remove</strong> para manter a consistência do grafo de objetos em memória.</p>
+      <div class="code-block"><span class="cmt">// Usuario.java</span>
+<span class="kw">public void</span> <span class="mtd">adicionarTarefa</span>(<span class="cls">Tarefa</span> tarefa) {
+    tarefas.<span class="mtd">add</span>(tarefa);
+    tarefa.<span class="mtd">setUsuario</span>(<span class="kw">this</span>);        <span class="cmt">// lado dono: é isto que grava a FK</span>
+}
+
+<span class="kw">public void</span> <span class="mtd">removerTarefa</span>(<span class="cls">Tarefa</span> tarefa) {
+    tarefas.<span class="mtd">remove</span>(tarefa);
+    tarefa.<span class="mtd">setUsuario</span>(<span class="kw">null</span>);
+}
+
+<span class="cmt">// Tarefa.java</span>
+<span class="kw">public void</span> <span class="mtd">adicionarEtiqueta</span>(<span class="cls">Etiqueta</span> etiqueta) {
+    etiquetas.<span class="mtd">add</span>(etiqueta);
+    etiqueta.<span class="mtd">getTarefas</span>().<span class="mtd">add</span>(<span class="kw">this</span>);
+}
+
+<span class="kw">public void</span> <span class="mtd">removerEtiqueta</span>(<span class="cls">Etiqueta</span> etiqueta) {
+    etiquetas.<span class="mtd">remove</span>(etiqueta);
+    etiqueta.<span class="mtd">getTarefas</span>().<span class="mtd">remove</span>(<span class="kw">this</span>);
+}</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">2. Evite a LazyInitializationException</strong>: inicialize as coleções <strong style="color:var(--text)">antes de fechar a sessão</strong> ou use <span class="ic">JOIN FETCH</span>. No Spring, a sessão fica aberta enquanto durar a transação, então quem acessa relações LAZY precisa estar em um método <span class="ic">@Transactional</span>.</p>
+      <div class="output-block"><span style="color:#f38ba8">org.hibernate.LazyInitializationException: failed to lazily initialize a collection of role: br.org.irede.taskmanagerapi.model.Usuario.tarefas: could not initialize proxy - no Session</span></div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">3. Use EAGER com extrema cautela</strong> para evitar o <strong style="color:var(--text)">problema N+1</strong>: 1 consulta traz a lista e, para cada item, sai mais uma consulta para buscar a relação. O <span class="ic">JOIN FETCH</span>, que resolve o N+1 buscando tudo em uma consulta, é tema da aula 05 (JPQL).</p>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">4. equals() e hashCode()</strong>: implemente-os usando <strong style="color:var(--text)">chaves de negócio</strong>, nunca o ID gerado.</p>
+      <div class="code-block"><span class="cmt">// Etiqueta.java — "nome" é único: é a chave de negócio</span>
+<span class="ann">@Override</span>
+<span class="kw">public boolean</span> <span class="mtd">equals</span>(<span class="typ">Object</span> o) {
+    <span class="kw">if</span> (<span class="kw">this</span> == o) <span class="kw">return true</span>;
+    <span class="kw">if</span> (!(o <span class="kw">instanceof</span> <span class="cls">Etiqueta</span> outra)) <span class="kw">return false</span>;
+    <span class="kw">return</span> <span class="typ">Objects</span>.<span class="mtd">equals</span>(nome, outra.nome);
+}
+
+<span class="ann">@Override</span>
+<span class="kw">public int</span> <span class="mtd">hashCode</span>() {
+    <span class="kw">return</span> <span class="typ">Objects</span>.<span class="mtd">hash</span>(nome);
+}</div>
+      <div class="warn-block">&#x1F914; Por que nunca o ID gerado? Com IDENTITY, o id é null até o INSERT. Uma Etiqueta nova entra no HashSet com um hashCode e, depois do save, o id muda e o hashCode muda junto. O objeto fica "perdido" dentro do próprio Set: contains() e remove() deixam de encontrá-lo. A chave de negócio (Etiqueta.nome, Usuario.email) existe desde o new.</div>
+    </div>
+
+    <!-- Card 11: Domínio ao final -->
+    <div class="card">
+      <div class="card-title">&#x1F5C2; O Task Manager ao fim da aula 04 <span class="pill pill-java">tag aula-04</span></div>
+      <p>Estrutura de pacotes do projeto:</p>
+      <div class="code-block">br.org.irede.taskmanagerapi
+├── <span class="cls">TaskmanagerapiApplication</span>.java
+├── config
+│   └── <span class="cls">CargaInicial</span>.java          <span class="cmt">// CommandLineRunner de demonstração</span>
+├── model
+│   ├── <span class="cls">Etiqueta</span>.java
+│   ├── <span class="typ">Prioridade</span>.java            <span class="cmt">// enum BAIXA, MEDIA, ALTA</span>
+│   ├── <span class="cls">Tarefa</span>.java
+│   └── <span class="cls">Usuario</span>.java
+└── repository
+    ├── <span class="cls">EtiquetaRepository</span>.java
+    ├── <span class="cls">TarefaRepository</span>.java
+    └── <span class="cls">UsuarioRepository</span>.java</div>
+      <table>
+        <tr><th>Relação</th><th>Lado dono</th><th>Lado inverso</th><th>Fetch</th><th>Cascade</th></tr>
+        <tr><td>Usuario 1:N Tarefa</td><td>Tarefa.usuario</td><td>Usuario.tarefas</td><td>LAZY / LAZY</td><td class="left">ALL + orphanRemoval (em Usuario.tarefas)</td></tr>
+        <tr><td>Tarefa N:N Etiqueta</td><td>Tarefa.etiquetas</td><td>Etiqueta.tarefas</td><td>LAZY / LAZY</td><td class="left">PERSIST, MERGE (em Tarefa.etiquetas)</td></tr>
+      </table>
+      <div class="output-label">psql: \dt no banco taskmanager</div>
+      <div class="output-block">              List of relations
+ Schema |      Name       | Type  |  Owner
+--------+-----------------+-------+----------
+ public | etiquetas       | table | postgres
+ public | tarefa_etiqueta | table | postgres
+ public | tarefas         | table | postgres
+ public | usuarios        | table | postgres
+(4 rows)</div>
+      <div class="warn-block">&#x1F6A7; Ainda não é tema: serialização JSON. Quando os controllers chegarem (aula 07), devolver entidades com relações nos dois sentidos pode gerar recursão infinita (Usuario &rarr; tarefas &rarr; usuario &rarr; ...). @JsonIgnore é um paliativo; a solução definitiva são os DTOs da aula 10.</div>
+    </div>
+
+  </div><!-- /resumo1 -->
+
+  <!-- ═══ SIMULADOR ═══ -->
+  <div id="simulador1" class="section">
+
+    <!-- Part 1: Dois mundos -->
+    <div class="card">
+      <div class="card-title">&#x1F309; Mesma Operação nos Dois Mundos <span class="pill pill-java">loja &times; taskmanager-api</span></div>
+      <p style="margin-bottom:4px">Escolha uma operação e compare o Hibernate puro do projeto <span class="ic">loja</span> com o Spring Data JPA do Task Manager. O SQL é o que aparece no console do Task Manager (PostgreSQL):</p>
+      <div class="type-btns" id="mundoOps">
+        <button class="type-btn active" onclick="runMundo('salvar',this)">salvar</button>
+        <button class="type-btn" onclick="runMundo('buscar',this)">buscar por id</button>
+        <button class="type-btn" onclick="runMundo('listar',this)">listar</button>
+        <button class="type-btn" onclick="runMundo('atualizar',this)">atualizar</button>
+        <button class="type-btn" onclick="runMundo('remover',this)">remover</button>
+      </div>
+      <div class="output-label">loja &mdash; Hibernate puro (EntityManager manual)</div>
+      <div class="code-block" id="mundoLoja" style="min-height:50px"></div>
+      <div class="output-label">taskmanager-api &mdash; Spring Data JPA</div>
+      <div class="code-block" id="mundoTask" style="min-height:50px"></div>
+      <div class="output-label">SQL gerado no console (PostgreSQL)</div>
+      <div class="output-block" id="mundoSql"></div>
+      <div class="warn-block" id="mundoDesc"></div>
+    </div>
+
+    <!-- Part 2: Lado dono -->
+    <div class="card">
+      <div class="card-title">&#x1F511; Lado Dono &times; mappedBy: Quem Grava a FK? <span class="pill pill-blue">1:N</span></div>
+      <p style="margin-bottom:4px">A usuária <strong style="color:var(--text)">Ana</strong> (id 1) já está salva. Veja o que acontece com a nova tarefa "Estudar JPA" em cada forma de ligar os dois objetos:</p>
+      <div class="type-btns" id="donoOps">
+        <button class="type-btn active" onclick="runDono('dono',this)">só o lado dono</button>
+        <button class="type-btn" onclick="runDono('inverso',this)">só o lado inverso</button>
+        <button class="type-btn" onclick="runDono('auxiliar',this)">método auxiliar</button>
+        <button class="type-btn" onclick="runDono('cascade',this)">cascade (aula 04)</button>
+      </div>
+      <div class="code-block" id="donoCode" style="min-height:70px"></div>
+      <div class="output-label">Console</div>
+      <div class="output-block" id="donoOutput"></div>
+      <div class="output-label">taskmanager=# SELECT id, titulo, usuario_id FROM tarefas;</div>
+      <div class="output-block" id="donoTable"></div>
+      <div class="warn-block" id="donoDesc"></div>
+    </div>
+
+    <!-- Part 3: Fetch -->
+    <div class="card">
+      <div class="card-title">&#x1F9EA; Laboratório de Fetch: LAZY, EAGER e N+1 <span class="pill pill-amber">Performance</span></div>
+      <p style="margin-bottom:4px">O banco tem <strong style="color:var(--text)">3 usuários</strong> e <strong style="color:var(--text)">4 tarefas</strong>. Escolha um cenário e conte quantos <span class="ic">SELECT</span> o Hibernate dispara:</p>
+      <div class="type-btns" id="fetchOps">
+        <button class="type-btn active" onclick="runFetch('lazyTx',this)">LAZY + @Transactional</button>
+        <button class="type-btn" onclick="runFetch('lazySemTx',this)">LAZY sem transação</button>
+        <button class="type-btn" onclick="runFetch('eager',this)">EAGER + findAll()</button>
+        <button class="type-btn" onclick="runFetch('lazyLoop',this)">LAZY + laço</button>
+        <button class="type-btn" onclick="runFetch('joinFetch',this)">JOIN FETCH</button>
+      </div>
+      <div class="code-block" id="fetchCode" style="min-height:70px"></div>
+      <div class="output-label">Console</div>
+      <div class="output-block" id="fetchOutput"></div>
+      <div class="warn-block" id="fetchDesc"></div>
+    </div>
+
+  </div><!-- /simulador1 -->
+
+  <!-- ═══ EXERCÍCIOS ═══ -->
+  <div id="exercicios1" class="section">
+
+    <div class="score-bar-area">
+      <div>
+        <div class="score-val"><span id="scoreVal1">0</span>/5</div>
+        <div class="score-label">acertos</div>
+      </div>
+      <div style="flex:1">
+        <div class="score-track"><div class="score-fill" id="scoreBar1"></div></div>
+      </div>
+    </div>
+
+    <!-- Ex 1 -->
+    <div class="ex-block" id="ex1-0">
+      <div class="ex-q">Questão 1 &mdash; Na relação 1:N entre <strong>Usuario</strong> e <strong>Tarefa</strong>, a chave estrangeira fica na tabela do lado "muitos": a coluna <code class="ic">usuario_id</code> da tabela <code class="ic">tarefas</code>.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(0,this,true)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(0,this,false)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-0"></div>
+    </div>
+
+    <!-- Ex 2 -->
+    <div class="ex-block" id="ex1-1">
+      <div class="ex-q">Questão 2 &mdash; O lado que usa <code class="ic">mappedBy</code> é o lado dono da relação: alterar <code class="ic">usuario.getTarefas()</code> é o que grava a FK no banco.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(1,this,false)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(1,this,true)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-1"></div>
+    </div>
+
+    <!-- Ex 3 -->
+    <div class="ex-block" id="ex1-2">
+      <div class="ex-q">Questão 3 &mdash; Um relacionamento N:N, como <strong>Tarefa &times; Etiqueta</strong>, exige uma tabela de junção com, no mínimo, duas colunas de chave estrangeira.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(2,this,true)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(2,this,false)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-2"></div>
+    </div>
+
+    <!-- Ex 4 -->
+    <div class="ex-block" id="ex1-3">
+      <div class="ex-q">Questão 4 &mdash; <code class="ic">FetchType.LAZY</code> é o carregamento padrão de um <code class="ic">@ManyToOne</code>, como <code class="ic">Tarefa.usuario</code>.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(3,this,false)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(3,this,true)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-3"></div>
+    </div>
+
+    <!-- Ex 5 -->
+    <div class="ex-block" id="ex1-4">
+      <div class="ex-q">Questão 5 &mdash; Com <code class="ic">@OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL)</code> em <code class="ic">Usuario.tarefas</code>, chamar <code class="ic">usuarioRepository.save(usuario)</code> salva o usuário novo e também as tarefas novas da lista.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(4,this,true)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(4,this,false)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-4"></div>
+    </div>
+
+  </div><!-- /exercicios1 -->
+
+  <!-- ═══ QUESTIONÁRIOS ═══ -->
+  <div id="questionarios1" class="section">
+
+    <div class="card">
+      <div class="card-title">&#x1F4DD; Questionários</div>
+      <p style="margin-bottom:1rem">Teste seu conhecimento com os questionários abaixo. Cada arquivo contém questões de verdadeiro ou falso e exercícios práticos de implementação.</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <a class="grad-btn" href="questionario-a02-01.html">&#x1F4CB; Quiz 01 &mdash; Relações 1:N e N:N e o Spring Boot</a>
+        <a class="grad-btn" href="questionario-a02-02.html" style="background:linear-gradient(270deg,#00c896 0%,#00a0cc 100%)">&#x1F4CB; Quiz 02 &mdash; Lado Dono, Cascade, Fetch e Boas Práticas</a>
+        <a class="grad-btn" href="questionario-a02-03.html" style="background:linear-gradient(270deg,#cba6f7 0%,#8d62ff 100%)">&#x1F6E0; Implementação &mdash; Usuario, Tarefa e Etiqueta no Task Manager</a>
+      </div>
+    </div>
+
+  </div><!-- /questionarios1 -->
+
+  <!-- ═══ CURIOSIDADES ═══ -->
+  <div id="curiosidades1" class="section">
+
+    <div class="card">
+      <div class="card-title">&#x1F680; Curiosidades sobre Relacionamentos e JPA</div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F4D0;</div>
+        <div>
+          <div class="curi-title">O diagrama do slide tem quase 50 anos</div>
+          <div class="curi-body">Os losangos e retângulos do diagrama "Funcionário — trabalha em — Departamento" vêm do <strong>Modelo Entidade-Relacionamento</strong>, proposto por <strong>Peter Chen</strong> em 1976 no artigo <em>"The Entity-Relationship Model — Toward a Unified View of Data"</em>.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F4AD;</div>
+        <div>
+          <div class="curi-title">LAZY é só um "pedido"</div>
+          <div class="curi-body">Pela especificação JPA, <code>EAGER</code> é uma obrigação do provedor, mas <code>LAZY</code> é apenas uma <strong>dica</strong> (<em>hint</em>): o provedor pode carregar antes do necessário. O Hibernate respeita o <code>LAZY</code> usando proxies e coleções especiais, como a <code>PersistentBag</code>.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F422;</div>
+        <div>
+          <div class="curi-title">O próprio Hibernate recomenda LAZY</div>
+          <div class="curi-body">O guia oficial do Hibernate recomenda marcar todas as associações como <strong>LAZY</strong> e decidir o carregamento antecipado na consulta, com <code>JOIN FETCH</code> ou <em>entity graphs</em>. Por isso trocamos o <code>@ManyToOne</code> de <code>Tarefa.usuario</code> para LAZY na aula 04.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F47B;</div>
+        <div>
+          <div class="curi-title">A tabela fantasma do @OneToMany</div>
+          <div class="curi-body">Um <code>@OneToMany</code> sem <code>mappedBy</code> e sem <code>@JoinColumn</code> é, pela especificação, uma relação unidirecional com <strong>tabela de junção</strong>. Por isso, ao esquecer o <code>mappedBy</code>, aparece uma tabela <code>usuarios_tarefas</code> que ninguém pediu.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F45C;</div>
+        <div>
+          <div class="curi-title">List ou Set no @ManyToMany?</div>
+          <div class="curi-body">Para o Hibernate, uma <code>List</code> sem <code>@OrderColumn</code> é um <em>bag</em>. Ao remover uma etiqueta de um bag N:N, ele apaga <strong>todas</strong> as linhas da tarefa na <code>tarefa_etiqueta</code> e reinsere as que sobraram. Com <code>Set</code>, sai um único <code>DELETE</code>.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F418;</div>
+        <div>
+          <div class="curi-title">"generated by default as identity"</div>
+          <div class="curi-body">As colunas <em>identity</em> do padrão SQL chegaram ao <strong>PostgreSQL 10</strong> (2017). Antes, o caminho era o tipo <code>serial</code>. Hoje o Hibernate usa <code>bigint generated by default as identity</code> quando a entidade tem <code>GenerationType.IDENTITY</code>.</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- /curiosidades1 -->
+
+  <!-- ═══ LINKS ═══ -->
+  <div id="links1" class="section">
+
+    <div class="card">
+      <div class="card-title">&#x1F517; Links Úteis</div>
+
+      <div style="display:flex;flex-direction:column;gap:14px;margin-top:4px">
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x23EA; Assunto Anterior</div>
+          <a class="link-item" href="https://alex-girao.github.io/irede-ciclo2-as1/unidade07/capitulo01/index.html" target="_blank">Assunto 01 &mdash; Introdução ao ORM e ao Hibernate (simulador anterior)</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x23E9; Próximo Assunto</div>
+          <a class="link-item" href="../index.html#assunto03">Assunto 03 &mdash; Consultas com JPQL e Criteria API (disponível em 10/11)</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F6E0; Task Manager API &mdash; Repositório da Turma</div>
+          <a class="link-item" href="https://github.com/irede-java-c2/taskmanager-api" target="_blank">https://github.com/irede-java-c2/taskmanager-api</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F3F7; Código das Aulas</div>
+          <span class="link-item" style="color:var(--muted)">aula-03 &mdash; Spring Boot, Tarefa e relação 1:N com Usuario (disponível após a aula)</span><br/>
+          <span class="link-item" style="color:var(--muted)">aula-04 &mdash; Etiqueta, relação N:N, fetch e cascade (disponível após a aula)</span>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F6D2; Projeto loja (aulas 01 e 02)</div>
+          <a class="link-item" href="https://github.com/irede-java-c2/loja" target="_blank">https://github.com/irede-java-c2/loja</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4CE; Citado no Slide &mdash; Modelagem e Design de Bancos de Dados Relacionais (DIO)</div>
+          <a class="link-item" href="https://www.dio.me/articles/modelagem-e-design-de-bancos-de-dados-relacionais-construindo-uma-base-solida" target="_blank">https://www.dio.me/articles/modelagem-e-design-de-bancos-de-dados-relacionais-construindo-uma-base-solida</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4CE; Citado no Slide &mdash; Tabela Relacional (N:N)</div>
+          <a class="link-item" href="https://wiki.agilityflow.io/books/manual-de-customiza%C3%A7%C3%A3o/page/tabela-relacional-%28nn%29" target="_blank">https://wiki.agilityflow.io/books/manual-de-customiza%C3%A7%C3%A3o/page/tabela-relacional-%28nn%29</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4DC; Jakarta Persistence 3.1 &mdash; Especificação</div>
+          <a class="link-item" href="https://jakarta.ee/specifications/persistence/3.1/" target="_blank">https://jakarta.ee/specifications/persistence/3.1/</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4D6; Hibernate ORM 6.6 &mdash; User Guide (Associations e Fetching)</div>
+          <a class="link-item" href="https://docs.jboss.org/hibernate/orm/6.6/userguide/html_single/Hibernate_User_Guide.html#associations" target="_blank">https://docs.jboss.org/hibernate/orm/6.6/userguide/html_single/Hibernate_User_Guide.html#associations</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F343; Spring Data JPA &mdash; Documentação de Referência</div>
+          <a class="link-item" href="https://docs.spring.io/spring-data/jpa/reference/" target="_blank">https://docs.spring.io/spring-data/jpa/reference/</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F343; Spring Boot &mdash; SQL Databases (DataSource e JPA)</div>
+          <a class="link-item" href="https://docs.spring.io/spring-boot/reference/data/sql.html" target="_blank">https://docs.spring.io/spring-boot/reference/data/sql.html</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F331; Spring Initializr</div>
+          <a class="link-item" href="https://start.spring.io/" target="_blank">https://start.spring.io/</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F418; PostgreSQL &mdash; Chaves Estrangeiras</div>
+          <a class="link-item" href="https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-FK" target="_blank">https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-FK</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F9EA; Baeldung &mdash; One-to-Many e Many-to-Many com JPA</div>
+          <a class="link-item" href="https://www.baeldung.com/hibernate-one-to-many" target="_blank">https://www.baeldung.com/hibernate-one-to-many</a><br/>
+          <a class="link-item" href="https://www.baeldung.com/jpa-many-to-many" target="_blank">https://www.baeldung.com/jpa-many-to-many</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">&#x1F468;&#x200D;&#x1F3EB; Instrutor das Aulas 03 e 04</div>
+          <a href="https://github.com/alex-girao" target="_blank" style="display:inline-flex;align-items:center;gap:12px;padding:10px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);text-decoration:none">
+            <img src="https://avatars.githubusercontent.com/u/3129090?v=4" alt="Alex Girão" width="44" height="44" style="border-radius:50%;border:2px solid rgba(141,98,255,.35)"/>
+            <span>
+              <span style="display:block;font-size:14px;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace">Alex Girão</span>
+              <span style="display:block;font-size:12px;color:var(--accent);font-family:'JetBrains Mono',monospace">github.com/alex-girao</span>
+            </span>
+          </a>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /links1 -->
+
+  </div><!-- /aula01 -->
+
+</div><!-- /wrap -->
+
+<footer>
+  Capacita Brasil &mdash; <span>iRede</span> &mdash; Material Interativo de Java
+</footer>
+
+<script>
+function showTab(t, btn) {
+  document.querySelectorAll('#aula01 .section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('#aula01 .tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(t).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── Simulador 1: Mesma operação nos dois mundos ── */
+const SEL_TAREFA = 'select t1_0.id,t1_0.concluida,t1_0.descricao,t1_0.prazo,t1_0.prioridade,t1_0.titulo from tarefas t1_0';
+const MUNDO_OPS = {
+  salvar: {
+    loja: `<span class="typ">EntityManager</span> em = <span class="cls">JPAUtil</span>.<span class="mtd">getEntityManager</span>();
+em.<span class="mtd">getTransaction</span>().<span class="mtd">begin</span>();
+em.<span class="mtd">persist</span>(<span class="kw">new</span> <span class="cls">Produto</span>(<span class="str">"Caneta"</span>, <span class="num">1.99</span>));
+em.<span class="mtd">getTransaction</span>().<span class="mtd">commit</span>();
+em.<span class="mtd">close</span>();`,
+    task: `<span class="cls">Tarefa</span> t = <span class="kw">new</span> <span class="cls">Tarefa</span>(<span class="str">"Estudar JPA"</span>, <span class="typ">Prioridade</span>.ALTA);
+tarefaRepository.<span class="mtd">save</span>(t);   <span class="cmt">// transação aberta e fechada pelo Spring</span>
+<span class="typ">System</span>.out.<span class="mtd">println</span>(t.<span class="mtd">getId</span>()); <span class="cmt">// 1</span>`,
+    sql: `Hibernate: insert into tarefas (concluida,descricao,prazo,prioridade,titulo) values (?,?,?,?,?) returning id
+<span style="color:#cdd6f4">1</span>`,
+    desc: '&#x1F539; save() de uma entidade nova (id null) chama o mesmo persist() que você usava no loja. A diferença é que begin, commit e close ficam por conta do Spring. Este é o estado do projeto na parte 1 da aula 03, antes de existir o Usuario.'
+  },
+  buscar: {
+    loja: `<span class="typ">EntityManager</span> em = <span class="cls">JPAUtil</span>.<span class="mtd">getEntityManager</span>();
+<span class="cls">Produto</span> p = em.<span class="mtd">find</span>(<span class="cls">Produto</span>.<span class="kw">class</span>, <span class="num">1L</span>);   <span class="cmt">// null se não existir</span>
+em.<span class="mtd">close</span>();`,
+    task: `<span class="typ">Optional</span>&lt;<span class="cls">Tarefa</span>&gt; t = tarefaRepository.<span class="mtd">findById</span>(<span class="num">1L</span>);
+t.<span class="mtd">ifPresent</span>(x -&gt; <span class="typ">System</span>.out.<span class="mtd">println</span>(x.<span class="mtd">getTitulo</span>()));`,
+    sql: `Hibernate: ${SEL_TAREFA} where t1_0.id=?
+<span style="color:#cdd6f4">Estudar JPA</span>`,
+    desc: '&#x1F539; findById() usa o em.find() por baixo, mas devolve um Optional em vez de null: o compilador te lembra de tratar o caso "não encontrado".'
+  },
+  listar: {
+    loja: `<span class="typ">EntityManager</span> em = <span class="cls">JPAUtil</span>.<span class="mtd">getEntityManager</span>();
+<span class="typ">List</span>&lt;<span class="cls">Produto</span>&gt; lista = em
+    .<span class="mtd">createQuery</span>(<span class="str">"SELECT p FROM Produto p"</span>, <span class="cls">Produto</span>.<span class="kw">class</span>)
+    .<span class="mtd">getResultList</span>();
+em.<span class="mtd">close</span>();`,
+    task: `<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; lista = tarefaRepository.<span class="mtd">findAll</span>();`,
+    sql: `Hibernate: ${SEL_TAREFA}`,
+    desc: '&#x1F539; findAll() monta a consulta JPQL "select t from Tarefa t" por você. Consultas próprias com @Query são o tema da aula 05.'
+  },
+  atualizar: {
+    loja: `<span class="typ">EntityManager</span> em = <span class="cls">JPAUtil</span>.<span class="mtd">getEntityManager</span>();
+em.<span class="mtd">getTransaction</span>().<span class="mtd">begin</span>();
+<span class="cls">Produto</span> p = em.<span class="mtd">find</span>(<span class="cls">Produto</span>.<span class="kw">class</span>, <span class="num">1L</span>);
+p.<span class="mtd">setPreco</span>(<span class="num">2.49</span>);                 <span class="cmt">// dirty checking</span>
+em.<span class="mtd">getTransaction</span>().<span class="mtd">commit</span>();   <span class="cmt">// UPDATE sai aqui</span>
+em.<span class="mtd">close</span>();`,
+    task: `<span class="cls">Tarefa</span> t = tarefaRepository.<span class="mtd">findById</span>(<span class="num">1L</span>).<span class="mtd">orElseThrow</span>();
+t.<span class="mtd">setConcluida</span>(<span class="kw">true</span>);
+tarefaRepository.<span class="mtd">save</span>(t);   <span class="cmt">// id preenchido → merge()</span>`,
+    sql: `Hibernate: ${SEL_TAREFA} where t1_0.id=?
+Hibernate: ${SEL_TAREFA} where t1_0.id=?
+Hibernate: update tarefas set concluida=?,descricao=?,prazo=?,prioridade=?,titulo=? where id=?`,
+    desc: '&#x1F539; Fora de uma transação, o objeto devolvido pelo findById() já está destacado. O save() de uma entidade com id chama merge(), que busca de novo no banco (2º SELECT) antes do UPDATE. Dentro de um método @Transactional, bastaria o setConcluida(): o dirty checking gera o UPDATE no commit, igual ao loja.'
+  },
+  remover: {
+    loja: `<span class="typ">EntityManager</span> em = <span class="cls">JPAUtil</span>.<span class="mtd">getEntityManager</span>();
+em.<span class="mtd">getTransaction</span>().<span class="mtd">begin</span>();
+<span class="cls">Produto</span> p = em.<span class="mtd">find</span>(<span class="cls">Produto</span>.<span class="kw">class</span>, <span class="num">1L</span>);
+em.<span class="mtd">remove</span>(p);
+em.<span class="mtd">getTransaction</span>().<span class="mtd">commit</span>();
+em.<span class="mtd">close</span>();`,
+    task: `tarefaRepository.<span class="mtd">deleteById</span>(<span class="num">1L</span>);`,
+    sql: `Hibernate: ${SEL_TAREFA} where t1_0.id=?
+Hibernate: delete from tarefas where id=?`,
+    desc: '&#x1F539; deleteById() faz exatamente o find() + remove() que você escrevia no loja, dentro de uma transação. Por isso aparece um SELECT antes do DELETE.'
+  }
+};
+
+function runMundo(op, btn) {
+  document.querySelectorAll('#mundoOps .type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const data = MUNDO_OPS[op];
+  document.getElementById('mundoLoja').innerHTML = data.loja;
+  document.getElementById('mundoTask').innerHTML = data.task;
+  document.getElementById('mundoSql').innerHTML = data.sql;
+  document.getElementById('mundoDesc').innerHTML = data.desc;
+}
+
+/* ── Simulador 2: Lado dono × mappedBy ── */
+const DONO_INICIO = `<span class="ann">@Transactional</span>
+<span class="kw">public void</span> <span class="mtd">run</span>(<span class="typ">String</span>... args) {
+    <span class="cls">Usuario</span> ana = usuarioRepository.<span class="mtd">findById</span>(<span class="num">1L</span>).<span class="mtd">orElseThrow</span>();
+    <span class="typ">System</span>.out.<span class="mtd">println</span>(<span class="str">"Antes: "</span> + ana.<span class="mtd">getTarefas</span>().<span class="mtd">size</span>());
+
+    <span class="cls">Tarefa</span> tarefa = <span class="kw">new</span> <span class="cls">Tarefa</span>(<span class="str">"Estudar JPA"</span>, <span class="typ">Prioridade</span>.ALTA);
+`;
+const DONO_FIM = `
+    tarefaRepository.<span class="mtd">save</span>(tarefa);
+
+    <span class="typ">System</span>.out.<span class="mtd">println</span>(<span class="str">"Depois: "</span> + ana.<span class="mtd">getTarefas</span>().<span class="mtd">size</span>());
+}`;
+const SQL_ANA = `Hibernate: select u1_0.id,u1_0.email,u1_0.nome from usuarios u1_0 where u1_0.id=?
+Hibernate: select t1_0.usuario_id,t1_0.id,t1_0.concluida,t1_0.descricao,t1_0.prazo,t1_0.prioridade,t1_0.titulo from tarefas t1_0 where t1_0.usuario_id=?
+<span style="color:#cdd6f4">Antes: 0</span>`;
+const INSERT_TAREFA = 'Hibernate: insert into tarefas (concluida,descricao,prazo,prioridade,titulo,usuario_id) values (?,?,?,?,?,?) returning id';
+const TABELA_ANA = ` id |   titulo    | usuario_id
+----+-------------+------------
+  1 | Estudar JPA |          1
+(1 row)`;
+const DONO_STEPS = {
+  dono: {
+    code: DONO_INICIO + `    tarefa.<span class="mtd">setUsuario</span>(ana);              <span class="cmt">// só o lado dono</span>` + DONO_FIM,
+    output: `${SQL_ANA}
+${INSERT_TAREFA}
+<span style="color:#fab387">Depois: 0     ← a lista em memória não sabe da nova tarefa!</span>`,
+    table: TABELA_ANA,
+    desc: '&#x1F539; O banco ficou CERTO, porque Tarefa.usuario é o lado dono e é ele que define o usuario_id. Mas o grafo em memória ficou inconsistente: ana.getTarefas() continua vazia até a próxima vez que for carregada do banco.'
+  },
+  inverso: {
+    code: DONO_INICIO + `    ana.<span class="mtd">getTarefas</span>().<span class="mtd">add</span>(tarefa);         <span class="cmt">// só o lado inverso</span>` + DONO_FIM,
+    output: `${SQL_ANA}
+<span style="color:#f38ba8">org.springframework.dao.DataIntegrityViolationException: not-null property references a null or transient value: br.org.irede.taskmanagerapi.model.Tarefa.usuario
+Caused by: org.hibernate.PropertyValueException: not-null property references a null or transient value: br.org.irede.taskmanagerapi.model.Tarefa.usuario</span>
+<span style="color:#fab387">↺ rollback da transação</span>`,
+    table: `<span style="color:#6c7086"> id | titulo | usuario_id
+----+--------+------------
+(0 rows)</span>`,
+    desc: '&#x1F539; O lado com mappedBy é só um espelho: o Hibernate IGNORA essa lista na hora de gravar a FK. Como tarefa.getUsuario() continua null e a coluna é nullable = false, a gravação falha. Sem o nullable = false seria pior: a tarefa seria salva com usuario_id NULL, sem nenhum erro.'
+  },
+  auxiliar: {
+    code: DONO_INICIO + `    ana.<span class="mtd">adicionarTarefa</span>(tarefa);           <span class="cmt">// atualiza os DOIS lados</span>` + DONO_FIM,
+    output: `${SQL_ANA}
+${INSERT_TAREFA}
+<span style="color:#a6e3a1">Depois: 1     ✓ banco e memória consistentes</span>`,
+    table: TABELA_ANA,
+    desc: '&#x1F539; Boa prática do slide: o método adicionarTarefa() faz tarefas.add(tarefa) e tarefa.setUsuario(this). O lado dono grava a FK e a lista em memória fica correta. Use sempre os métodos auxiliares em vez de mexer direto nas coleções.'
+  },
+  cascade: {
+    code: `<span class="ann">@Transactional</span>
+<span class="kw">public void</span> <span class="mtd">run</span>(<span class="typ">String</span>... args) {
+    <span class="cls">Usuario</span> bruno = <span class="kw">new</span> <span class="cls">Usuario</span>(<span class="str">"Bruno"</span>, <span class="str">"bruno@email.com"</span>);
+    bruno.<span class="mtd">adicionarTarefa</span>(<span class="kw">new</span> <span class="cls">Tarefa</span>(<span class="str">"Configurar PostgreSQL"</span>, <span class="typ">Prioridade</span>.MEDIA));
+    bruno.<span class="mtd">adicionarTarefa</span>(<span class="kw">new</span> <span class="cls">Tarefa</span>(<span class="str">"Criar Etiqueta"</span>, <span class="typ">Prioridade</span>.BAIXA));
+
+    usuarioRepository.<span class="mtd">save</span>(bruno);   <span class="cmt">// cascade = ALL leva as tarefas junto</span>
+}`,
+    output: `Hibernate: insert into usuarios (email,nome) values (?,?) returning id
+${INSERT_TAREFA}
+${INSERT_TAREFA}
+<span style="color:#a6e3a1">✓ 1 save() → 3 INSERTs</span>`,
+    table: ` id |        titulo         | usuario_id
+----+-----------------------+------------
+  1 | Configurar PostgreSQL |          2
+  2 | Criar Etiqueta        |          2
+(2 rows)`,
+    desc: '&#x1F539; Com @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL), o persist do usuário se propaga para as tarefas da lista. Repare na ordem: primeiro o INSERT do usuário (para obter o id 2), depois as tarefas com usuario_id = 2. Sem o cascade, as tarefas da lista não seriam salvas.'
+  }
+};
+
+function runDono(step, btn) {
+  document.querySelectorAll('#donoOps .type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const data = DONO_STEPS[step];
+  document.getElementById('donoCode').innerHTML = data.code;
+  document.getElementById('donoOutput').innerHTML = data.output;
+  document.getElementById('donoTable').innerHTML = data.table;
+  document.getElementById('donoDesc').innerHTML = data.desc;
+}
+
+/* ── Simulador 3: Laboratório de fetch ── */
+const SQL_USUARIO = 'Hibernate: select u1_0.id,u1_0.email,u1_0.nome from usuarios u1_0 where u1_0.id=?';
+const SQL_TAREFAS = 'Hibernate: select t1_0.id,t1_0.concluida,t1_0.descricao,t1_0.prazo,t1_0.prioridade,t1_0.titulo,t1_0.usuario_id from tarefas t1_0';
+const LOG = (nivel, logger, msg) => `<span style="color:#6c7086">2026-11-05T19:40:12.418-03:00</span> ${nivel} 18324 --- [taskmanagerapi] [           main] ${logger} : ${msg}`;
+const FETCH_STEPS = {
+  lazyTx: {
+    code: `<span class="ann">@Transactional</span>
+<span class="kw">public void</span> <span class="mtd">run</span>(<span class="typ">String</span>... args) {
+    <span class="cls">Usuario</span> ana = usuarioRepository.<span class="mtd">findById</span>(<span class="num">1L</span>).<span class="mtd">orElseThrow</span>();
+    <span class="typ">System</span>.out.<span class="mtd">println</span>(ana.<span class="mtd">getNome</span>());
+    <span class="typ">System</span>.out.<span class="mtd">println</span>(ana.<span class="mtd">getTarefas</span>().<span class="mtd">size</span>() + <span class="str">" tarefas"</span>);
+}`,
+    output: `${SQL_USUARIO}
+<span style="color:#cdd6f4">Ana</span>
+Hibernate: select t1_0.usuario_id,t1_0.id,t1_0.concluida,t1_0.descricao,t1_0.prazo,t1_0.prioridade,t1_0.titulo from tarefas t1_0 where t1_0.usuario_id=?
+<span style="color:#cdd6f4">2 tarefas</span>
+<span style="color:#89dceb">→ 2 SELECTs, e o segundo só quando a coleção foi acessada</span>`,
+    desc: '&#x1F539; LAZY em ação: findById() traz só o usuário. As tarefas são buscadas no momento do getTarefas().size(), como no slide (cliente.getPedidos()). Funciona porque o @Transactional mantém a sessão aberta até o fim do método.'
+  },
+  lazySemTx: {
+    code: `<span class="cmt">// mesmo código, SEM @Transactional</span>
+<span class="kw">public void</span> <span class="mtd">run</span>(<span class="typ">String</span>... args) {
+    <span class="cls">Usuario</span> ana = usuarioRepository.<span class="mtd">findById</span>(<span class="num">1L</span>).<span class="mtd">orElseThrow</span>();
+    <span class="typ">System</span>.out.<span class="mtd">println</span>(ana.<span class="mtd">getNome</span>());
+    <span class="typ">System</span>.out.<span class="mtd">println</span>(ana.<span class="mtd">getTarefas</span>().<span class="mtd">size</span>() + <span class="str">" tarefas"</span>);
+}`,
+    output: `${SQL_USUARIO}
+<span style="color:#cdd6f4">Ana</span>
+${LOG('<span style="color:#f38ba8">ERROR</span>', 'o.s.boot.SpringApplication              ', 'Application run failed')}
+<span style="color:#f38ba8">java.lang.IllegalStateException: Failed to execute CommandLineRunner
+	...
+Caused by: org.hibernate.LazyInitializationException: failed to lazily initialize a collection of role: br.org.irede.taskmanagerapi.model.Usuario.tarefas: could not initialize proxy - no Session</span>`,
+    desc: '&#x1F539; Sem transação, a sessão abre e fecha dentro do findById(). Quando getTarefas() tenta buscar as tarefas, não há mais sessão: LazyInitializationException. Correções do slide: inicializar a coleção antes de fechar a sessão (aqui, anotar o método com @Transactional) ou usar JOIN FETCH.'
+  },
+  eager: {
+    code: `<span class="cmt">// Tarefa.java como na aula 03: @ManyToOne sem fetch → EAGER</span>
+<span class="ann">@ManyToOne</span>
+<span class="ann">@JoinColumn</span>(name = <span class="str">"usuario_id"</span>, nullable = <span class="kw">false</span>)
+<span class="kw">private</span> <span class="cls">Usuario</span> usuario;
+
+<span class="cmt">// no CommandLineRunner</span>
+<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; tarefas = tarefaRepository.<span class="mtd">findAll</span>();
+<span class="typ">System</span>.out.<span class="mtd">println</span>(tarefas.<span class="mtd">size</span>() + <span class="str">" tarefas"</span>);`,
+    output: `${SQL_TAREFAS}
+${SQL_USUARIO}
+${SQL_USUARIO}
+${SQL_USUARIO}
+<span style="color:#cdd6f4">4 tarefas</span>
+<span style="color:#fab387">→ 1 + 3 SELECTs (problema N+1), e o usuário nem foi usado!</span>`,
+    desc: '&#x1F539; EAGER obriga o Hibernate a trazer o usuário de cada tarefa. O findAll() faz 1 SELECT nas tarefas e depois 1 SELECT por usuário diferente (Ana, Bruno e Carla). Com 1.000 usuários seriam 1.001 consultas. Por isso o slide diz: use EAGER com extrema cautela.'
+  },
+  lazyLoop: {
+    code: `<span class="cmt">// Tarefa.usuario agora é LAZY (revisão da aula 04)</span>
+<span class="ann">@Transactional</span>
+<span class="kw">public void</span> <span class="mtd">run</span>(<span class="typ">String</span>... args) {
+    <span class="kw">for</span> (<span class="cls">Tarefa</span> t : tarefaRepository.<span class="mtd">findAll</span>()) {
+        <span class="typ">System</span>.out.<span class="mtd">println</span>(t.<span class="mtd">getTitulo</span>() + <span class="str">" → "</span> + t.<span class="mtd">getUsuario</span>().<span class="mtd">getNome</span>());
+    }
+}`,
+    output: `${SQL_TAREFAS}
+${SQL_USUARIO}
+<span style="color:#cdd6f4">Estudar JPA → Ana</span>
+<span style="color:#cdd6f4">Revisar PR → Ana</span>
+${SQL_USUARIO}
+<span style="color:#cdd6f4">Configurar PostgreSQL → Bruno</span>
+${SQL_USUARIO}
+<span style="color:#cdd6f4">Escrever testes → Carla</span>
+<span style="color:#fab387">→ 1 + 3 SELECTs de novo: o N+1 voltou, agora dentro do laço</span>`,
+    desc: '&#x1F539; LAZY não é mágica: ele só adia a consulta. Se o laço acessa o usuário de cada tarefa, o N+1 aparece do mesmo jeito. A vantagem é que agora a decisão é sua: quem não usa o usuário não paga por ele. "Revisar PR" não gerou SELECT porque a Ana já estava no contexto de persistência.'
+  },
+  joinFetch: {
+    code: `<span class="cmt">// TarefaRepository — prévia da aula 05 (JPQL)</span>
+<span class="ann">@Query</span>(<span class="str">"select t from Tarefa t join fetch t.usuario"</span>)
+<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">listarComUsuario</span>();
+
+<span class="cmt">// no CommandLineRunner (@Transactional)</span>
+<span class="kw">for</span> (<span class="cls">Tarefa</span> t : tarefaRepository.<span class="mtd">listarComUsuario</span>()) {
+    <span class="typ">System</span>.out.<span class="mtd">println</span>(t.<span class="mtd">getTitulo</span>() + <span class="str">" → "</span> + t.<span class="mtd">getUsuario</span>().<span class="mtd">getNome</span>());
+}`,
+    output: `Hibernate: select t1_0.id,t1_0.concluida,t1_0.descricao,t1_0.prazo,t1_0.prioridade,t1_0.titulo,u1_0.id,u1_0.email,u1_0.nome from tarefas t1_0 join usuarios u1_0 on u1_0.id=t1_0.usuario_id
+<span style="color:#cdd6f4">Estudar JPA → Ana
+Revisar PR → Ana
+Configurar PostgreSQL → Bruno
+Escrever testes → Carla</span>
+<span style="color:#a6e3a1">→ 1 SELECT só, com JOIN</span>`,
+    desc: '&#x1F539; JOIN FETCH diz ao Hibernate: "nesta consulta, traga o usuário junto". O mapeamento continua LAZY e quem precisa do usuário pede na consulta. Você vai escrever consultas assim na aula 05.'
+  }
+};
+
+function runFetch(step, btn) {
+  document.querySelectorAll('#fetchOps .type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const data = FETCH_STEPS[step];
+  document.getElementById('fetchCode').innerHTML = data.code;
+  document.getElementById('fetchOutput').innerHTML = data.output;
+  document.getElementById('fetchDesc').innerHTML = data.desc;
+}
+
+function answer1(i, btn, isCorrect) {
+  const block = document.getElementById('ex1-' + i);
+  const fb = document.getElementById('fb1-' + i);
+  block.querySelectorAll('.choice').forEach(b => b.disabled = true);
+  if (isCorrect) {
+    btn.classList.add('correct');
+    block.classList.add('done');
+    fb.className = 'feedback show ok';
+    fb.textContent = '✓ Correto!';
+    window.score1 = (window.score1 || 0) + 1;
+  } else {
+    btn.classList.add('wrong');
+    fb.className = 'feedback show ko';
+    fb.textContent = '✗ Incorreto. Revise o resumo desta aula.';
+  }
+  document.getElementById('scoreVal1').textContent = window.score1 || 0;
+  document.getElementById('scoreBar1').style.width = ((window.score1 || 0) / 5 * 100) + '%';
+}
+</script>
+
+<script>
+window.addEventListener('DOMContentLoaded', function () {
+  runMundo('salvar', document.querySelector('#mundoOps .type-btn.active'));
+  runDono('dono', document.querySelector('#donoOps .type-btn.active'));
+  runFetch('lazyTx', document.querySelector('#fetchOps .type-btn.active'));
+});
+</script>
+</body>
+</html>
