@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Implementação — Consultas e Busca Paginada no Task Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:          #f0f0f5;
+  --surface:     #ffffff;
+  --border:      #d8d5e8;
+  --accent:      #8d62ff;
+  --accent2:     #00c896;
+  --text:        #1a1730;
+  --muted:       #7a748f;
+  --green:       #155e35;
+  --green-bg:    #d6f5e5;
+  --green-border:#6edaa8;
+  --radius:      10px;
+  --glow:        0 0 18px rgba(141,98,255,0.15);
+  --grad:        linear-gradient(270deg, #8d62ff 53.6%, #00ffbc 98.32%);
+  --surface2:    #f7f5ff;
+  --danger:      #d63030;
+  --warn:        #d48a00;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+  padding: 0 0 60px;
+  background-image:
+    radial-gradient(ellipse 70% 40% at 50% -10%, rgba(141,98,255,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 30% at 80% 110%, rgba(0,200,150,0.06) 0%, transparent 70%);
+}
+
+header {
+  text-align: center;
+  padding: 36px 20px 28px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  background: var(--surface);
+  box-shadow: 0 2px 16px rgba(141,98,255,0.07);
+}
+header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 2px;
+  background: linear-gradient(90deg, transparent, #8d62ff, transparent);
+}
+.header-logo { height: 48px; margin-bottom: 14px; display: block; margin-left: auto; margin-right: auto; }
+.logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+  font-weight: 700; letter-spacing: -0.5px;
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.logo span { opacity: 0.6; }
+.subtitle { color: var(--muted); font-size: .85rem; margin-top: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+.header-badge {
+  display: inline-block; margin-top: 12px; padding: 4px 16px; border-radius: 99px;
+  font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace;
+  background: linear-gradient(270deg, rgba(141,98,255,.15), rgba(0,255,188,.1));
+  border: 1px solid rgba(141,98,255,.3); color: var(--accent); letter-spacing: .06em;
+}
+
+.wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+.back-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--muted); font-size: 13px; text-decoration: none;
+  font-family: 'JetBrains Mono', monospace; margin-bottom: 1.5rem;
+  transition: color .15s;
+}
+.back-link:hover { color: var(--accent); }
+
+.info-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.25rem 1.5rem; margin-bottom: 1.75rem;
+  box-shadow: 0 2px 8px rgba(141,98,255,0.06); position: relative; overflow: hidden;
+}
+.info-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(141,98,255,.35), transparent);
+}
+.info-card-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700;
+  margin-bottom: .6rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.info-card p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+.pill { display: inline-block; padding: 3px 11px; border-radius: 99px; font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.pill-grad  { background: rgba(141,98,255,.12); border: 1px solid rgba(141,98,255,.3);  color: var(--accent); }
+.pill-green { background: rgba(0,200,150,.12);  border: 1px solid rgba(0,200,150,.3);   color: #0a7a5a; }
+.pill-amber { background: rgba(212,138,0,.1);   border: 1px solid rgba(212,138,0,.25);  color: var(--warn); }
+.pill-red   { background: rgba(214,48,48,.1);   border: 1px solid rgba(214,48,48,.25);  color: var(--danger); }
+.pill-blue  { background: rgba(141,98,255,.12); border: 1px solid rgba(141,98,255,.25); color: #5a30cc; }
+
+.ex-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 1.5rem; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.ex-header {
+  padding: 1.1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: var(--surface2);
+}
+.ex-number {
+  font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700;
+  background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  min-width: 36px;
+}
+.ex-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: var(--text); flex: 1;
+}
+.ex-body { padding: 1.25rem 1.5rem; }
+.ex-enunciado {
+  font-size: 14px; color: var(--text); line-height: 1.75; margin-bottom: 1rem;
+}
+.ex-enunciado strong { color: var(--accent); }
+.ex-requisitos {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 16px; margin-bottom: 1.25rem;
+}
+.ex-requisitos-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  color: var(--muted); letter-spacing: .07em; text-transform: uppercase; margin-bottom: 10px;
+}
+.ex-requisitos ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.ex-requisitos li {
+  font-size: 13px; color: var(--muted); display: flex; align-items: flex-start; gap: 8px; line-height: 1.55;
+}
+.ex-requisitos li::before {
+  content: '›'; color: var(--accent); font-weight: 700; font-size: 16px;
+  line-height: 1; flex-shrink: 0; margin-top: 1px;
+}
+.ic { background: rgba(141,98,255,.12); color: #5a30cc; padding: 1px 6px; border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+
+.reveal-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 22px; border-radius: 8px; border: 1.5px solid var(--accent);
+  background: transparent; color: var(--accent);
+  cursor: pointer; font-size: 13px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  transition: all .2s; margin-bottom: 0;
+}
+.reveal-btn:hover { background: rgba(141,98,255,.1); transform: translateY(-1px); box-shadow: var(--glow); }
+.reveal-btn.revealed {
+  background: var(--grad); color: #fff; border-color: transparent;
+  box-shadow: 0 3px 14px rgba(141,98,255,.3);
+}
+.reveal-btn svg { transition: transform .3s; }
+.reveal-btn.revealed svg { transform: rotate(180deg); }
+
+.solution-area { margin-top: 1rem; display: none; }
+.solution-area.visible { display: block; }
+.solution-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  color: var(--muted); letter-spacing: .07em; text-transform: uppercase;
+  margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+}
+.solution-label::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); }
+
+.code-block {
+  background: #1e1e2e; border: 1px solid #3a3a5c; border-radius: 10px;
+  padding: 18px 20px; font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; line-height: 1.85; color: #cdd6f4; overflow-x: auto; white-space: pre;
+}
+.code-block .kw  { color: #cba6f7; }
+.code-block .typ { color: #89b4fa; }
+.code-block .str { color: #a6e3a1; }
+.code-block .num { color: #fab387; }
+.code-block .cmt { color: #6c7086; font-style: italic; }
+.code-block .cls { color: #f5c2e7; }
+.code-block .mtd { color: #89dceb; }
+.code-block .ann { color: #f9e2af; }
+
+.output-block {
+  background: #12121e; border: 1px solid #2a2a40; border-radius: 8px;
+  padding: 14px 18px; margin-top: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.8;
+  color: #a6e3a1; overflow-x: auto; white-space: pre;
+}
+.output-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  color: var(--muted); letter-spacing: .07em; text-transform: uppercase;
+  margin: 12px 0 6px; display: flex; align-items: center; gap: 6px;
+}
+.output-label::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #a6e3a1; }
+
+.diff-bar { display: flex; gap: 4px; align-items: center; }
+.diff-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+.diff-dot.filled-easy   { background: #00c896; }
+.diff-dot.filled-medium { background: #d48a00; }
+.diff-dot.filled-hard   { background: #d63030; }
+
+.progress-area {
+  display: flex; align-items: center; gap: 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 18px; margin-bottom: 1.75rem; box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.progress-val {
+  font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+  background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  min-width: 60px;
+}
+.progress-label { font-size: 11px; color: var(--muted); }
+.progress-track { flex: 1; background: #e5e2f0; border-radius: 99px; height: 8px; overflow: hidden; }
+.progress-fill  { height: 100%; border-radius: 99px; background: var(--grad); width: 0%; transition: width .4s cubic-bezier(.4,0,.2,1); }
+
+.tip-box {
+  margin-top: 12px; padding: 12px 14px;
+  background: rgba(141,98,255,.08); border: 1px solid rgba(141,98,255,.2);
+  border-radius: 8px; font-size: 13px; color: var(--muted); line-height: 1.65;
+}
+
+footer { text-align: center; margin-top: 3rem; font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+footer span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; }
+
+@media (max-width: 540px) {
+  .ex-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .code-block { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <img class="header-logo" src="https://capacitabrasil.irede.org.br/assets/capacitaLogo-Ct3BEyem.png" alt="Capacita Brasil"/>
+  <div class="logo">&#x2615; <span>//</span> Java</div>
+  <div class="subtitle">Desenvolvimento Java &mdash; Assunto 03 | Aulas 05 e 06</div>
+  <div class="header-badge">Questões de Implementação</div>
+</header>
+
+<div class="wrap">
+
+  <a class="back-link" href="index.html">&#x2190; Voltar para a Aula</a>
+
+  <div class="info-card">
+    <div class="info-card-title">
+      Consultas e Busca Paginada no Task Manager
+      <span class="pill pill-grad">5 questões</span>
+      <span class="pill pill-green">Nível Básico a Avançado</span>
+    </div>
+    <p>Reproduza, passo a passo, o que as aulas 05 e 06 entregam no <strong style="color:var(--text)">taskmanager-api</strong>: as <strong style="color:var(--text)">consultas JPQL</strong> do <span class="ic">TarefaRepository</span> (aula 05) e a <strong style="color:var(--text)">busca com filtros dinâmicos e paginação</strong> com a Criteria API (aula 06). Cada questão parte do código da anterior e do estado do projeto ao fim da aula 04 (<span class="ic">Usuario</span>, <span class="ic">Tarefa</span>, <span class="ic">Etiqueta</span>). Tente resolver por conta própria e depois revele a solução para conferir.</p>
+  </div>
+
+  <div class="progress-area">
+    <div>
+      <div class="progress-val" id="progressVal">0/5</div>
+      <div class="progress-label">reveladas</div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+
+  <!-- ═══════════ QUESTÃO 1 ═══════════ -->
+  <div class="ex-card">
+    <div class="ex-header">
+      <div class="ex-number">1)</div>
+      <div class="ex-title">Massa de Dados e as Primeiras Consultas com @Query</div>
+      <span class="pill pill-green">Básico</span>
+      <div class="diff-bar" title="Dificuldade: Básico">
+        <div class="diff-dot filled-easy"></div>
+        <div class="diff-dot"></div>
+        <div class="diff-dot"></div>
+        <div class="diff-dot"></div>
+        <div class="diff-dot"></div>
+      </div>
+    </div>
+    <div class="ex-body">
+      <div class="ex-enunciado">
+        Para testar consultas, o banco precisa de dados variados. Ajuste o <span class="ic">run</span> da <span class="ic">TaskmanagerApiApplication</span> para gravar 2 usuários e 7 tarefas com prazos, prioridades e status diferentes. Depois, escreva as duas primeiras consultas JPQL do <span class="ic">TarefaRepository</span>.
+      </div>
+      <div class="ex-requisitos">
+        <div class="ex-requisitos-title">Requisitos</div>
+        <ul>
+          <li>Um método auxiliar <span class="ic">nova(titulo, prioridade, concluida, prazo, dono)</span> no runner, que cria, liga ao usuário e salva a tarefa</li>
+          <li><span class="ic">listarPendentes()</span>: <span class="ic">@Query</span> com <span class="ic">SELECT t FROM Tarefa t WHERE t.concluida = false</span></li>
+          <li><span class="ic">buscarPorPrioridade(prioridade, concluida)</span>: <span class="ic">@Query</span> com os parâmetros nomeados <span class="ic">:prioridade</span> e <span class="ic">:concluida</span> e <span class="ic">@Param</span></li>
+          <li>Imprimir no console o título das tarefas devolvidas pelas duas consultas</li>
+        </ul>
+      </div>
+      <button class="reveal-btn" onclick="toggleSolution(1, this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Ver solução
+      </button>
+      <div class="solution-area" id="sol1">
+        <div class="solution-label">Solução</div>
+        <div class="code-block"><span class="kw">package</span> br.org.irede.taskmanagerapi.repository;
+
+<span class="kw">import</span> br.org.irede.taskmanagerapi.model.Prioridade;
+<span class="kw">import</span> br.org.irede.taskmanagerapi.model.Tarefa;
+<span class="kw">import</span> java.util.List;
+<span class="kw">import</span> org.springframework.data.jpa.repository.JpaRepository;
+<span class="kw">import</span> org.springframework.data.jpa.repository.Query;
+<span class="kw">import</span> org.springframework.data.repository.query.Param;
+
+<span class="kw">public interface</span> <span class="cls">TarefaRepository</span> <span class="kw">extends</span> <span class="typ">JpaRepository</span>&lt;<span class="cls">Tarefa</span>, <span class="typ">Long</span>&gt; {
+
+    <span class="ann">@Query</span>(<span class="str">"SELECT t FROM Tarefa t WHERE t.concluida = false"</span>)
+    <span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">listarPendentes</span>();
+
+    <span class="ann">@Query</span>(<span class="str">"SELECT t FROM Tarefa t WHERE t.prioridade = :prioridade AND t.concluida = :concluida"</span>)
+    <span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscarPorPrioridade</span>(<span class="ann">@Param</span>(<span class="str">"prioridade"</span>) <span class="typ">Prioridade</span> prioridade,
+                                     <span class="ann">@Param</span>(<span class="str">"concluida"</span>) <span class="kw">boolean</span> concluida);
+}</div>
+        <div class="code-block" style="margin-top:12px"><span class="cmt">// TaskmanagerApiApplication.java (trecho; imports: java.time.LocalDate)</span>
+<span class="ann">@Override</span>
+<span class="kw">public void</span> <span class="mtd">run</span>(<span class="typ">String</span>... args) <span class="kw">throws</span> <span class="typ">Exception</span> {
+    <span class="cls">Usuario</span> ana = usuarioRepository.<span class="mtd">save</span>(<span class="kw">new</span> <span class="cls">Usuario</span>(<span class="str">"Ana Souza"</span>, <span class="str">"ana@email.com"</span>, <span class="str">"123456"</span>));
+    <span class="cls">Usuario</span> bruno = usuarioRepository.<span class="mtd">save</span>(<span class="kw">new</span> <span class="cls">Usuario</span>(<span class="str">"Bruno Lima"</span>, <span class="str">"bruno@email.com"</span>, <span class="str">"123456"</span>));
+
+    <span class="mtd">nova</span>(<span class="str">"Estudar JPA"</span>,               <span class="typ">Prioridade</span>.ALTA,  <span class="kw">true</span>,  <span class="str">"2026-11-05"</span>, ana);
+    <span class="mtd">nova</span>(<span class="str">"Configurar PostgreSQL"</span>,     <span class="typ">Prioridade</span>.MEDIA, <span class="kw">true</span>,  <span class="str">"2026-11-03"</span>, bruno);
+    <span class="mtd">nova</span>(<span class="str">"Escrever consultas JPQL"</span>,   <span class="typ">Prioridade</span>.ALTA,  <span class="kw">false</span>, <span class="str">"2026-11-10"</span>, ana);
+    <span class="mtd">nova</span>(<span class="str">"Revisar JOIN FETCH"</span>,        <span class="typ">Prioridade</span>.MEDIA, <span class="kw">false</span>, <span class="str">"2026-11-12"</span>, ana);
+    <span class="mtd">nova</span>(<span class="str">"Montar busca com Criteria"</span>, <span class="typ">Prioridade</span>.ALTA,  <span class="kw">false</span>, <span class="str">"2026-11-12"</span>, bruno);
+    <span class="mtd">nova</span>(<span class="str">"Testar paginação"</span>,          <span class="typ">Prioridade</span>.BAIXA, <span class="kw">false</span>, <span class="str">"2026-11-14"</span>, bruno);
+    <span class="mtd">nova</span>(<span class="str">"Fazer backup do banco"</span>,     <span class="typ">Prioridade</span>.BAIXA, <span class="kw">false</span>, <span class="str">"2026-11-20"</span>, ana);
+
+    <span class="typ">System</span>.out.<span class="mtd">println</span>(<span class="str">"====== Pendentes"</span>);
+    tarefaRepository.<span class="mtd">listarPendentes</span>().<span class="mtd">forEach</span>(t -&gt; <span class="typ">System</span>.out.<span class="mtd">println</span>(t.<span class="mtd">getTitulo</span>()));
+
+    <span class="typ">System</span>.out.<span class="mtd">println</span>(<span class="str">"====== ALTA e concluídas"</span>);
+    tarefaRepository.<span class="mtd">buscarPorPrioridade</span>(<span class="typ">Prioridade</span>.ALTA, <span class="kw">true</span>)
+            .<span class="mtd">forEach</span>(t -&gt; <span class="typ">System</span>.out.<span class="mtd">println</span>(t.<span class="mtd">getTitulo</span>()));
+}
+
+<span class="kw">private</span> <span class="cls">Tarefa</span> <span class="mtd">nova</span>(<span class="typ">String</span> titulo, <span class="typ">Prioridade</span> prioridade, <span class="kw">boolean</span> concluida,
+                    <span class="typ">String</span> prazo, <span class="cls">Usuario</span> dono) {
+    <span class="cls">Tarefa</span> t = <span class="kw">new</span> <span class="cls">Tarefa</span>(titulo, <span class="kw">null</span>, prioridade);
+    t.<span class="mtd">setConcluida</span>(concluida);
+    t.<span class="mtd">setPrazo</span>(<span class="typ">LocalDate</span>.<span class="mtd">parse</span>(prazo));
+    dono.<span class="mtd">adicionarTarefa</span>(t);           <span class="cmt">// liga os dois lados (assunto 02)</span>
+    <span class="kw">return</span> tarefaRepository.<span class="mtd">save</span>(t);
+}</div>
+        <div class="output-label">Console (trecho)</div>
+        <div class="output-block"><span style="color:#cdd6f4">====== Pendentes</span>
+Hibernate:
+    select
+        t1_0.id,
+        t1_0.concluida,
+        t1_0.descricao,
+        t1_0.prazo,
+        t1_0.prioridade,
+        t1_0.titulo,
+        t1_0.usuario_id
+    from
+        tarefas t1_0
+    where
+        t1_0.concluida=false
+<span style="color:#6c7086">... + 2 selects em usuarios (Tarefa.usuario é EAGER) ...</span>
+<span style="color:#cdd6f4">Escrever consultas JPQL
+Revisar JOIN FETCH
+Montar busca com Criteria
+Testar paginação
+Fazer backup do banco
+====== ALTA e concluídas</span>
+Hibernate:
+    select
+        ...
+    from
+        tarefas t1_0
+    where
+        t1_0.prioridade=?
+        and t1_0.concluida=?
+<span style="color:#6c7086">... + 1 select em usuarios ...</span>
+<span style="color:#cdd6f4">Estudar JPA</span></div>
+        <div class="tip-box">&#x1F4A1; Com <span class="ic">ddl-auto=create</span>, as tabelas são recriadas a cada execução, então a massa de dados não se acumula. O <span class="ic">@Param("prioridade")</span> liga o argumento do método ao <span class="ic">:prioridade</span> da JPQL. Se escrever <span class="ic">:prioridad</span> ou <span class="ic">Tarefas</span> por engano, a aplicação <strong>nem sobe</strong>: o Spring Data valida as consultas de <span class="ic">@Query</span> na inicialização.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ QUESTÃO 2 ═══════════ -->
+  <div class="ex-card">
+    <div class="ex-header">
+      <div class="ex-number">2)</div>
+      <div class="ex-title">JOIN, JOIN FETCH e ORDER BY</div>
+      <span class="pill pill-green">Básico</span>
+      <div class="diff-bar" title="Dificuldade: Básico">
+        <div class="diff-dot filled-easy"></div>
+        <div class="diff-dot filled-easy"></div>
+        <div class="diff-dot"></div>
+        <div class="diff-dot"></div>
+        <div class="diff-dot"></div>
+      </div>
+    </div>
+    <div class="ex-body">
+      <div class="ex-enunciado">
+        Use as relações mapeadas no assunto 02 dentro das consultas. Liste as tarefas de um usuário (pelo e-mail) <strong>já com o usuário carregado</strong>, em ordem de prazo, e as tarefas que têm uma determinada etiqueta.
+      </div>
+      <div class="ex-requisitos">
+        <div class="ex-requisitos-title">Requisitos</div>
+        <ul>
+          <li><span class="ic">listarPorUsuario(email)</span>: <span class="ic">JOIN FETCH t.usuario</span>, filtro por <span class="ic">u.email</span> e <span class="ic">ORDER BY t.prazo</span></li>
+          <li><span class="ic">listarPorEtiqueta(nome)</span>: <span class="ic">JOIN t.etiquetas e</span> com filtro por <span class="ic">e.nome</span></li>
+          <li>No runner, imprimir <span class="ic">titulo → nome do usuário</span> das tarefas da Ana e conferir no console que saiu <strong>um único</strong> SELECT</li>
+        </ul>
+      </div>
+      <button class="reveal-btn" onclick="toggleSolution(2, this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Ver solução
+      </button>
+      <div class="solution-area" id="sol2">
+        <div class="solution-label">Solução</div>
+        <div class="code-block"><span class="cmt">// TarefaRepository — novos métodos</span>
+<span class="ann">@Query</span>(<span class="str">"SELECT t FROM Tarefa t JOIN FETCH t.usuario u WHERE u.email = :email ORDER BY t.prazo"</span>)
+<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">listarPorUsuario</span>(<span class="ann">@Param</span>(<span class="str">"email"</span>) <span class="typ">String</span> email);
+
+<span class="ann">@Query</span>(<span class="str">"SELECT t FROM Tarefa t JOIN t.etiquetas e WHERE e.nome = :nome"</span>)
+<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">listarPorEtiqueta</span>(<span class="ann">@Param</span>(<span class="str">"nome"</span>) <span class="typ">String</span> nome);</div>
+        <div class="code-block" style="margin-top:12px"><span class="cmt">// run() — depois da massa de dados</span>
+<span class="typ">System</span>.out.<span class="mtd">println</span>(<span class="str">"====== Tarefas da Ana"</span>);
+tarefaRepository.<span class="mtd">listarPorUsuario</span>(<span class="str">"ana@email.com"</span>)
+        .<span class="mtd">forEach</span>(t -&gt; <span class="typ">System</span>.out.<span class="mtd">println</span>(t.<span class="mtd">getTitulo</span>() + <span class="str">" → "</span> + t.<span class="mtd">getUsuario</span>().<span class="mtd">getNome</span>()));</div>
+        <div class="output-label">Console</div>
+        <div class="output-block"><span style="color:#cdd6f4">====== Tarefas da Ana</span>
+Hibernate:
+    select
+        t1_0.id,
+        t1_0.concluida,
+        t1_0.descricao,
+        t1_0.prazo,
+        t1_0.prioridade,
+        t1_0.titulo,
+        u1_0.id,
+        u1_0.email,
+        u1_0.nome,
+        u1_0.senha
+    from
+        tarefas t1_0
+    join
+        usuarios u1_0
+            on u1_0.id=t1_0.usuario_id
+    where
+        u1_0.email=?
+    order by
+        t1_0.prazo
+<span style="color:#cdd6f4">Estudar JPA → Ana Souza
+Escrever consultas JPQL → Ana Souza
+Revisar JOIN FETCH → Ana Souza
+Fazer backup do banco → Ana Souza</span></div>
+        <div class="tip-box">&#x1F4A1; Compare com a questão 1: lá, depois do SELECT de tarefas, vinham SELECTs extras em <span class="ic">usuarios</span>. Aqui as colunas <span class="ic">u1_0.*</span> entram no mesmo SELECT e não sai mais nenhum. Para testar o <span class="ic">listarPorEtiqueta</span>, associe etiquetas às tarefas na massa de dados com o método auxiliar que você criou na aula 04 (por exemplo, "estudo" nas tarefas 1, 3, 4 e 5).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ QUESTÃO 3 ═══════════ -->
+  <div class="ex-card">
+    <div class="ex-header">
+      <div class="ex-number">3)</div>
+      <div class="ex-title">Agregação com GROUP BY e uma Consulta em SQL Nativo</div>
+      <span class="pill pill-amber">Intermediário</span>
+      <div class="diff-bar" title="Dificuldade: Intermediário">
+        <div class="diff-dot filled-medium"></div>
+        <div class="diff-dot filled-medium"></div>
+        <div class="diff-dot filled-medium"></div>
+        <div class="diff-dot"></div>
+        <div class="diff-dot"></div>
+      </div>
+    </div>
+    <div class="ex-body">
+      <div class="ex-enunciado">
+        Feche a aula 05 com duas consultas diferentes: um <strong>resumo</strong> de quantas tarefas existem por prioridade (JPQL com <span class="ic">COUNT</span>) e uma busca por termo que <strong>ignora maiúsculas e minúsculas</strong> usando o <span class="ic">ILIKE</span> do PostgreSQL (SQL nativo).
+      </div>
+      <div class="ex-requisitos">
+        <div class="ex-requisitos-title">Requisitos</div>
+        <ul>
+          <li><span class="ic">contarPorPrioridade()</span>: <span class="ic">SELECT t.prioridade, COUNT(t) ... GROUP BY t.prioridade ORDER BY t.prioridade</span>, retornando <span class="ic">List&lt;Object[]&gt;</span></li>
+          <li><span class="ic">buscarPorTermoNativo(termo)</span>: <span class="ic">@Query</span> com <span class="ic">nativeQuery = true</span> sobre a tabela <span class="ic">tarefas</span></li>
+          <li>No runner, imprimir <span class="ic">PRIORIDADE: quantidade</span> e o resultado de <span class="ic">buscarPorTermoNativo("jp")</span></li>
+        </ul>
+      </div>
+      <button class="reveal-btn" onclick="toggleSolution(3, this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Ver solução
+      </button>
+      <div class="solution-area" id="sol3">
+        <div class="solution-label">Solução</div>
+        <div class="code-block"><span class="cmt">// TarefaRepository — novos métodos</span>
+<span class="ann">@Query</span>(<span class="str">"SELECT t.prioridade, COUNT(t) FROM Tarefa t GROUP BY t.prioridade ORDER BY t.prioridade"</span>)
+<span class="typ">List</span>&lt;<span class="typ">Object</span>[]&gt; <span class="mtd">contarPorPrioridade</span>();
+
+<span class="ann">@Query</span>(value = <span class="str">"SELECT * FROM tarefas WHERE titulo ILIKE CONCAT('%', :termo, '%')"</span>,
+       nativeQuery = <span class="kw">true</span>)
+<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscarPorTermoNativo</span>(<span class="ann">@Param</span>(<span class="str">"termo"</span>) <span class="typ">String</span> termo);</div>
+        <div class="code-block" style="margin-top:12px"><span class="cmt">// run()</span>
+<span class="typ">System</span>.out.<span class="mtd">println</span>(<span class="str">"====== Tarefas por prioridade"</span>);
+<span class="kw">for</span> (<span class="typ">Object</span>[] linha : tarefaRepository.<span class="mtd">contarPorPrioridade</span>()) {
+    <span class="typ">Prioridade</span> prioridade = (<span class="typ">Prioridade</span>) linha[<span class="num">0</span>];
+    <span class="typ">Long</span> quantidade = (<span class="typ">Long</span>) linha[<span class="num">1</span>];
+    <span class="typ">System</span>.out.<span class="mtd">println</span>(prioridade + <span class="str">": "</span> + quantidade);
+}
+
+<span class="typ">System</span>.out.<span class="mtd">println</span>(<span class="str">"====== Busca nativa por 'jp'"</span>);
+tarefaRepository.<span class="mtd">buscarPorTermoNativo</span>(<span class="str">"jp"</span>).<span class="mtd">forEach</span>(t -&gt; <span class="typ">System</span>.out.<span class="mtd">println</span>(t.<span class="mtd">getTitulo</span>()));</div>
+        <div class="output-label">Console</div>
+        <div class="output-block"><span style="color:#cdd6f4">====== Tarefas por prioridade</span>
+Hibernate:
+    select
+        t1_0.prioridade,
+        count(t1_0.id)
+    from
+        tarefas t1_0
+    group by
+        t1_0.prioridade
+    order by
+        t1_0.prioridade
+<span style="color:#cdd6f4">ALTA: 3
+BAIXA: 2
+MEDIA: 2
+====== Busca nativa por 'jp'</span>
+Hibernate:
+    SELECT
+        *
+    FROM
+        tarefas
+    WHERE
+        titulo ILIKE CONCAT('%', ?, '%')
+<span style="color:#6c7086">... + 1 select em usuarios ...</span>
+<span style="color:#cdd6f4">Estudar JPA
+Escrever consultas JPQL</span></div>
+        <div class="tip-box">&#x1F4A1; Na agregação não sai SELECT de usuários: a consulta devolve valores, não entidades. Cada <span class="ic">Object[]</span> traz os itens na ordem do SELECT (<span class="ic">[0]</span> = prioridade, <span class="ic">[1]</span> = quantidade); o <span class="ic">COUNT</span> é sempre <span class="ic">Long</span>. A ordem é ALTA, BAIXA, MEDIA porque o enum é gravado como texto. Na busca nativa, <span class="ic">"jp"</span> encontra "JPA" e "JPQL" graças ao <span class="ic">ILIKE</span>. Em JPQL, com <span class="ic">LIKE</span>, nada seria encontrado.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ QUESTÃO 4 ═══════════ -->
+  <div class="ex-card">
+    <div class="ex-header">
+      <div class="ex-number">4)</div>
+      <div class="ex-title">Busca com Filtros Dinâmicos (Criteria API)</div>
+      <span class="pill pill-red">Avançado</span>
+      <div class="diff-bar" title="Dificuldade: Avançado">
+        <div class="diff-dot filled-hard"></div>
+        <div class="diff-dot filled-hard"></div>
+        <div class="diff-dot filled-hard"></div>
+        <div class="diff-dot filled-hard"></div>
+        <div class="diff-dot"></div>
+      </div>
+    </div>
+    <div class="ex-body">
+      <div class="ex-enunciado">
+        Aula 06: implemente o <span class="ic">buscaDinamica</span> do slide 11 para tarefas. Como a Criteria precisa do <span class="ic">EntityManager</span>, o código fica em uma <strong>implementação customizada</strong> que o Spring Data "cola" no <span class="ic">TarefaRepository</span>. Assim, o resto do projeto continua chamando tudo por <span class="ic">tarefaRepository</span>.
+      </div>
+      <div class="ex-requisitos">
+        <div class="ex-requisitos-title">Requisitos</div>
+        <ul>
+          <li>Interface <span class="ic">TarefaRepositoryCustom</span> com <span class="ic">List&lt;Tarefa&gt; buscaDinamica(String titulo, LocalDate prazoMin, Prioridade prioridade)</span></li>
+          <li>Classe <span class="ic">TarefaRepositoryCustomImpl</span> (o sufixo <span class="ic">Impl</span> é obrigatório) com <span class="ic">EntityManager</span> injetado por <span class="ic">@PersistenceContext</span></li>
+          <li>Um <span class="ic">Predicate</span> por filtro preenchido: <span class="ic">like</span> no título, <span class="ic">greaterThanOrEqualTo</span> no prazo, <span class="ic">equal</span> na prioridade</li>
+          <li><span class="ic">TarefaRepository</span> passa a estender também <span class="ic">TarefaRepositoryCustom</span></li>
+          <li>Testar com <span class="ic">buscaDinamica(null, LocalDate.of(2026, 11, 12), Prioridade.ALTA)</span></li>
+        </ul>
+      </div>
+      <button class="reveal-btn" onclick="toggleSolution(4, this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Ver solução
+      </button>
+      <div class="solution-area" id="sol4">
+        <div class="solution-label">Solução</div>
+        <div class="code-block"><span class="kw">package</span> br.org.irede.taskmanagerapi.repository;
+
+<span class="kw">import</span> br.org.irede.taskmanagerapi.model.Prioridade;
+<span class="kw">import</span> br.org.irede.taskmanagerapi.model.Tarefa;
+<span class="kw">import</span> java.time.LocalDate;
+<span class="kw">import</span> java.util.List;
+
+<span class="kw">public interface</span> <span class="cls">TarefaRepositoryCustom</span> {
+
+    <span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscaDinamica</span>(<span class="typ">String</span> titulo, <span class="typ">LocalDate</span> prazoMin, <span class="typ">Prioridade</span> prioridade);
+}</div>
+        <div class="code-block" style="margin-top:12px"><span class="kw">package</span> br.org.irede.taskmanagerapi.repository;
+
+<span class="kw">import</span> br.org.irede.taskmanagerapi.model.Prioridade;
+<span class="kw">import</span> br.org.irede.taskmanagerapi.model.Tarefa;
+<span class="kw">import</span> jakarta.persistence.EntityManager;
+<span class="kw">import</span> jakarta.persistence.PersistenceContext;
+<span class="kw">import</span> jakarta.persistence.criteria.CriteriaBuilder;
+<span class="kw">import</span> jakarta.persistence.criteria.CriteriaQuery;
+<span class="kw">import</span> jakarta.persistence.criteria.Predicate;
+<span class="kw">import</span> jakarta.persistence.criteria.Root;
+<span class="kw">import</span> java.time.LocalDate;
+<span class="kw">import</span> java.util.ArrayList;
+<span class="kw">import</span> java.util.List;
+
+<span class="kw">public class</span> <span class="cls">TarefaRepositoryCustomImpl</span> <span class="kw">implements</span> <span class="cls">TarefaRepositoryCustom</span> {
+
+    <span class="ann">@PersistenceContext</span>
+    <span class="kw">private</span> <span class="typ">EntityManager</span> em;
+
+    <span class="ann">@Override</span>
+    <span class="kw">public</span> <span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscaDinamica</span>(<span class="typ">String</span> titulo, <span class="typ">LocalDate</span> prazoMin, <span class="typ">Prioridade</span> prioridade) {
+        <span class="typ">CriteriaBuilder</span> cb = em.<span class="mtd">getCriteriaBuilder</span>();
+        <span class="typ">CriteriaQuery</span>&lt;<span class="cls">Tarefa</span>&gt; cq = cb.<span class="mtd">createQuery</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>);
+        <span class="typ">Root</span>&lt;<span class="cls">Tarefa</span>&gt; root = cq.<span class="mtd">from</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>);
+
+        <span class="typ">List</span>&lt;<span class="typ">Predicate</span>&gt; predicates = <span class="kw">new</span> <span class="typ">ArrayList</span>&lt;&gt;();
+
+        <span class="kw">if</span> (titulo != <span class="kw">null</span> &amp;&amp; !titulo.<span class="mtd">trim</span>().<span class="mtd">isEmpty</span>()) {
+            predicates.<span class="mtd">add</span>(cb.<span class="mtd">like</span>(root.<span class="mtd">get</span>(<span class="str">"titulo"</span>), <span class="str">"%"</span> + titulo + <span class="str">"%"</span>));
+        }
+        <span class="kw">if</span> (prazoMin != <span class="kw">null</span>) {
+            predicates.<span class="mtd">add</span>(cb.<span class="mtd">greaterThanOrEqualTo</span>(root.<span class="mtd">get</span>(<span class="str">"prazo"</span>), prazoMin));
+        }
+        <span class="kw">if</span> (prioridade != <span class="kw">null</span>) {
+            predicates.<span class="mtd">add</span>(cb.<span class="mtd">equal</span>(root.<span class="mtd">get</span>(<span class="str">"prioridade"</span>), prioridade));
+        }
+
+        <span class="cmt">// Combina todos os predicados da lista com "AND"</span>
+        cq.<span class="mtd">where</span>(predicates.<span class="mtd">toArray</span>(<span class="kw">new</span> <span class="typ">Predicate</span>[<span class="num">0</span>]));
+
+        <span class="kw">return</span> em.<span class="mtd">createQuery</span>(cq).<span class="mtd">getResultList</span>();
+    }
+}</div>
+        <div class="code-block" style="margin-top:12px"><span class="kw">public interface</span> <span class="cls">TarefaRepository</span> <span class="kw">extends</span> <span class="typ">JpaRepository</span>&lt;<span class="cls">Tarefa</span>, <span class="typ">Long</span>&gt;, <span class="cls">TarefaRepositoryCustom</span> {
+    <span class="cmt">// ... métodos @Query das questões 1 a 3</span>
+}
+
+<span class="cmt">// run()</span>
+<span class="typ">System</span>.out.<span class="mtd">println</span>(<span class="str">"====== Busca dinâmica"</span>);
+tarefaRepository.<span class="mtd">buscaDinamica</span>(<span class="kw">null</span>, <span class="typ">LocalDate</span>.<span class="mtd">of</span>(<span class="num">2026</span>, <span class="num">11</span>, <span class="num">12</span>), <span class="typ">Prioridade</span>.ALTA)
+        .<span class="mtd">forEach</span>(t -&gt; <span class="typ">System</span>.out.<span class="mtd">println</span>(t.<span class="mtd">getTitulo</span>()));</div>
+        <div class="output-label">Console</div>
+        <div class="output-block"><span style="color:#cdd6f4">====== Busca dinâmica</span>
+Hibernate:
+    select
+        t1_0.id,
+        t1_0.concluida,
+        t1_0.descricao,
+        t1_0.prazo,
+        t1_0.prioridade,
+        t1_0.titulo,
+        t1_0.usuario_id
+    from
+        tarefas t1_0
+    where
+        t1_0.prazo&gt;=?
+        and t1_0.prioridade=?
+<span style="color:#6c7086">... + 1 select em usuarios ...</span>
+<span style="color:#cdd6f4">Montar busca com Criteria</span></div>
+        <div class="tip-box">&#x1F4A1; O Spring Data procura uma classe com o nome da interface customizada + <span class="ic">Impl</span> (<span class="ic">TarefaRepositoryCustomImpl</span>) no mesmo pacote e a usa para os métodos de <span class="ic">TarefaRepositoryCustom</span>. Os demais métodos continuam gerados automaticamente. Teste outras combinações: <span class="ic">buscaDinamica("a", LocalDate.of(2026, 11, 10), null)</span> devolve as tarefas 3 a 7, e <span class="ic">buscaDinamica(null, null, null)</span> devolve todas.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ QUESTÃO 5 ═══════════ -->
+  <div class="ex-card">
+    <div class="ex-header">
+      <div class="ex-number">5)</div>
+      <div class="ex-title">Paginação: do setFirstResult ao Page&lt;Tarefa&gt;</div>
+      <span class="pill pill-red">Avançado</span>
+      <div class="diff-bar" title="Dificuldade: Avançado">
+        <div class="diff-dot filled-hard"></div>
+        <div class="diff-dot filled-hard"></div>
+        <div class="diff-dot filled-hard"></div>
+        <div class="diff-dot filled-hard"></div>
+        <div class="diff-dot filled-hard"></div>
+      </div>
+    </div>
+    <div class="ex-body">
+      <div class="ex-enunciado">
+        Feche a aula 06 (e o Marco 1) com a paginação. Primeiro, o método do slide 10 com <span class="ic">setFirstResult</span>/<span class="ic">setMaxResults</span>. Depois, uma versão da busca dinâmica que recebe um <span class="ic">Pageable</span> e devolve um <span class="ic">Page&lt;Tarefa&gt;</span>, que traz a página e também o total de registros.
+      </div>
+      <div class="ex-requisitos">
+        <div class="ex-requisitos-title">Requisitos</div>
+        <ul>
+          <li><span class="ic">buscarTarefasPaginado(int pagina, int tamanhoPagina)</span>, igual ao slide (página começando em 1, <span class="ic">ORDER BY t.prazo DESC</span>)</li>
+          <li><span class="ic">Page&lt;Tarefa&gt; buscaDinamica(titulo, prazoMin, prioridade, Pageable pageable)</span> com os mesmos filtros da questão 4</li>
+          <li>Extrair a montagem dos predicados para um método privado <span class="ic">montarPredicados</span>, usado pela consulta da página <strong>e</strong> pela de contagem</li>
+          <li>Ordenação vinda do <span class="ic">Pageable</span> (<span class="ic">QueryUtils.toOrders</span>), <span class="ic">OFFSET</span>/<span class="ic">FETCH</span> com <span class="ic">getOffset()</span>/<span class="ic">getPageSize()</span> e total com <span class="ic">cb.count(...)</span></li>
+          <li>Testar com <span class="ic">PageRequest.of(1, 3, Sort.by("prazo"))</span> e sem filtros</li>
+        </ul>
+      </div>
+      <button class="reveal-btn" onclick="toggleSolution(5, this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Ver solução
+      </button>
+      <div class="solution-area" id="sol5">
+        <div class="solution-label">Solução</div>
+        <div class="code-block"><span class="cmt">// TarefaRepositoryCustom — novas assinaturas</span>
+<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscarTarefasPaginado</span>(<span class="kw">int</span> pagina, <span class="kw">int</span> tamanhoPagina);
+
+<span class="typ">Page</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscaDinamica</span>(<span class="typ">String</span> titulo, <span class="typ">LocalDate</span> prazoMin, <span class="typ">Prioridade</span> prioridade, <span class="typ">Pageable</span> pageable);</div>
+        <div class="code-block" style="margin-top:12px"><span class="cmt">// TarefaRepositoryCustomImpl — novos imports</span>
+<span class="kw">import</span> org.springframework.data.domain.Page;
+<span class="kw">import</span> org.springframework.data.domain.PageImpl;
+<span class="kw">import</span> org.springframework.data.domain.Pageable;
+<span class="kw">import</span> org.springframework.data.jpa.repository.query.QueryUtils;
+
+    <span class="cmt">// Slide 10: paginação com JPQL (página começa em 1)</span>
+    <span class="ann">@Override</span>
+    <span class="kw">public</span> <span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscarTarefasPaginado</span>(<span class="kw">int</span> pagina, <span class="kw">int</span> tamanhoPagina) {
+        <span class="typ">String</span> jpql = <span class="str">"SELECT t FROM Tarefa t ORDER BY t.prazo DESC"</span>;
+
+        <span class="kw">int</span> primeiroResultado = (pagina - <span class="num">1</span>) * tamanhoPagina;
+
+        <span class="kw">return</span> em.<span class="mtd">createQuery</span>(jpql, <span class="cls">Tarefa</span>.<span class="kw">class</span>)
+                 .<span class="mtd">setFirstResult</span>(primeiroResultado)
+                 .<span class="mtd">setMaxResults</span>(tamanhoPagina)
+                 .<span class="mtd">getResultList</span>();
+    }
+
+    <span class="cmt">// A busca da questão 4 passa a usar o método auxiliar</span>
+    <span class="ann">@Override</span>
+    <span class="kw">public</span> <span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscaDinamica</span>(<span class="typ">String</span> titulo, <span class="typ">LocalDate</span> prazoMin, <span class="typ">Prioridade</span> prioridade) {
+        <span class="typ">CriteriaBuilder</span> cb = em.<span class="mtd">getCriteriaBuilder</span>();
+        <span class="typ">CriteriaQuery</span>&lt;<span class="cls">Tarefa</span>&gt; cq = cb.<span class="mtd">createQuery</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>);
+        <span class="typ">Root</span>&lt;<span class="cls">Tarefa</span>&gt; root = cq.<span class="mtd">from</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>);
+        cq.<span class="mtd">where</span>(<span class="mtd">montarPredicados</span>(cb, root, titulo, prazoMin, prioridade));
+        <span class="kw">return</span> em.<span class="mtd">createQuery</span>(cq).<span class="mtd">getResultList</span>();
+    }
+
+    <span class="cmt">// Busca dinâmica paginada</span>
+    <span class="ann">@Override</span>
+    <span class="kw">public</span> <span class="typ">Page</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscaDinamica</span>(<span class="typ">String</span> titulo, <span class="typ">LocalDate</span> prazoMin, <span class="typ">Prioridade</span> prioridade,
+                                      <span class="typ">Pageable</span> pageable) {
+        <span class="typ">CriteriaBuilder</span> cb = em.<span class="mtd">getCriteriaBuilder</span>();
+
+        <span class="cmt">// 1. consulta da página: filtros + ordenação + OFFSET/FETCH</span>
+        <span class="typ">CriteriaQuery</span>&lt;<span class="cls">Tarefa</span>&gt; cq = cb.<span class="mtd">createQuery</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>);
+        <span class="typ">Root</span>&lt;<span class="cls">Tarefa</span>&gt; root = cq.<span class="mtd">from</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>);
+        cq.<span class="mtd">where</span>(<span class="mtd">montarPredicados</span>(cb, root, titulo, prazoMin, prioridade));
+        cq.<span class="mtd">orderBy</span>(<span class="typ">QueryUtils</span>.<span class="mtd">toOrders</span>(pageable.<span class="mtd">getSort</span>(), root, cb));
+
+        <span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; conteudo = em.<span class="mtd">createQuery</span>(cq)
+                .<span class="mtd">setFirstResult</span>((<span class="kw">int</span>) pageable.<span class="mtd">getOffset</span>())
+                .<span class="mtd">setMaxResults</span>(pageable.<span class="mtd">getPageSize</span>())
+                .<span class="mtd">getResultList</span>();
+
+        <span class="cmt">// 2. consulta de contagem: mesmos filtros, sem ordem e sem página</span>
+        <span class="typ">CriteriaQuery</span>&lt;<span class="typ">Long</span>&gt; cqCount = cb.<span class="mtd">createQuery</span>(<span class="typ">Long</span>.<span class="kw">class</span>);
+        <span class="typ">Root</span>&lt;<span class="cls">Tarefa</span>&gt; rootCount = cqCount.<span class="mtd">from</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>);
+        cqCount.<span class="mtd">select</span>(cb.<span class="mtd">count</span>(rootCount))
+               .<span class="mtd">where</span>(<span class="mtd">montarPredicados</span>(cb, rootCount, titulo, prazoMin, prioridade));
+        <span class="typ">Long</span> total = em.<span class="mtd">createQuery</span>(cqCount).<span class="mtd">getSingleResult</span>();
+
+        <span class="kw">return new</span> <span class="typ">PageImpl</span>&lt;&gt;(conteudo, pageable, total);
+    }
+
+    <span class="kw">private</span> <span class="typ">Predicate</span>[] <span class="mtd">montarPredicados</span>(<span class="typ">CriteriaBuilder</span> cb, <span class="typ">Root</span>&lt;<span class="cls">Tarefa</span>&gt; root,
+            <span class="typ">String</span> titulo, <span class="typ">LocalDate</span> prazoMin, <span class="typ">Prioridade</span> prioridade) {
+        <span class="typ">List</span>&lt;<span class="typ">Predicate</span>&gt; predicates = <span class="kw">new</span> <span class="typ">ArrayList</span>&lt;&gt;();
+        <span class="kw">if</span> (titulo != <span class="kw">null</span> &amp;&amp; !titulo.<span class="mtd">trim</span>().<span class="mtd">isEmpty</span>()) {
+            predicates.<span class="mtd">add</span>(cb.<span class="mtd">like</span>(root.<span class="mtd">get</span>(<span class="str">"titulo"</span>), <span class="str">"%"</span> + titulo + <span class="str">"%"</span>));
+        }
+        <span class="kw">if</span> (prazoMin != <span class="kw">null</span>) {
+            predicates.<span class="mtd">add</span>(cb.<span class="mtd">greaterThanOrEqualTo</span>(root.<span class="mtd">get</span>(<span class="str">"prazo"</span>), prazoMin));
+        }
+        <span class="kw">if</span> (prioridade != <span class="kw">null</span>) {
+            predicates.<span class="mtd">add</span>(cb.<span class="mtd">equal</span>(root.<span class="mtd">get</span>(<span class="str">"prioridade"</span>), prioridade));
+        }
+        <span class="kw">return</span> predicates.<span class="mtd">toArray</span>(<span class="kw">new</span> <span class="typ">Predicate</span>[<span class="num">0</span>]);
+    }</div>
+        <div class="code-block" style="margin-top:12px"><span class="cmt">// run() — imports: org.springframework.data.domain.{Page, PageRequest, Sort}</span>
+<span class="typ">Page</span>&lt;<span class="cls">Tarefa</span>&gt; pagina = tarefaRepository.<span class="mtd">buscaDinamica</span>(<span class="kw">null</span>, <span class="kw">null</span>, <span class="kw">null</span>,
+        <span class="typ">PageRequest</span>.<span class="mtd">of</span>(<span class="num">1</span>, <span class="num">3</span>, <span class="typ">Sort</span>.<span class="mtd">by</span>(<span class="str">"prazo"</span>)));
+<span class="typ">System</span>.out.<span class="mtd">println</span>(pagina);
+pagina.<span class="mtd">getContent</span>().<span class="mtd">forEach</span>(t -&gt; <span class="typ">System</span>.out.<span class="mtd">println</span>(t.<span class="mtd">getPrazo</span>() + <span class="str">" "</span> + t.<span class="mtd">getTitulo</span>()));
+<span class="typ">System</span>.out.<span class="mtd">println</span>(<span class="str">"total="</span> + pagina.<span class="mtd">getTotalElements</span>() + <span class="str">" paginas="</span> + pagina.<span class="mtd">getTotalPages</span>());</div>
+        <div class="output-label">Console</div>
+        <div class="output-block">Hibernate:
+    select
+        t1_0.id,
+        t1_0.concluida,
+        t1_0.descricao,
+        t1_0.prazo,
+        t1_0.prioridade,
+        t1_0.titulo,
+        t1_0.usuario_id
+    from
+        tarefas t1_0
+    order by
+        t1_0.prazo
+    offset
+        ? rows
+    fetch
+        first ? rows only
+<span style="color:#6c7086">... + 2 selects em usuarios ...</span>
+Hibernate:
+    select
+        count(t1_0.id)
+    from
+        tarefas t1_0
+<span style="color:#cdd6f4">Page 2 of 3 containing br.org.irede.taskmanagerapi.model.Tarefa instances
+2026-11-12 Revisar JOIN FETCH
+2026-11-12 Montar busca com Criteria
+2026-11-14 Testar paginação
+total=7 paginas=3</span></div>
+        <div class="tip-box">&#x1F4A1; <span class="ic">PageRequest.of(1, 3)</span> é a <strong>segunda</strong> página (o Spring começa em 0), por isso <span class="ic">getOffset()</span> = 3. O <span class="ic">Root</span> pertence a uma consulta: a contagem precisa do seu próprio <span class="ic">rootCount</span>, e é por isso que os predicados são montados por um método reaproveitável. Quando dois registros têm o mesmo prazo (aqui, 12/11), o banco pode devolvê-los em qualquer ordem. Para uma paginação estável, desempate com um segundo critério: <span class="ic">Sort.by("prazo", "id")</span>. Este <span class="ic">Page</span> volta na aula 12, quando a paginação chega à API REST.</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<footer>
+  Capacita Brasil &mdash; <span>iRede</span> &mdash; Material Interativo de Java
+</footer>
+
+<script>
+let revealed = 0;
+
+function toggleSolution(num, btn) {
+  const sol = document.getElementById('sol' + num);
+  const isVisible = sol.classList.contains('visible');
+
+  if (!isVisible) {
+    sol.classList.add('visible');
+    btn.classList.add('revealed');
+    btn.innerHTML =
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transform:rotate(180deg)"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+      'Ocultar solução';
+    if (!btn.dataset.counted) {
+      btn.dataset.counted = '1';
+      revealed++;
+      updateProgress();
+    }
+  } else {
+    sol.classList.remove('visible');
+    btn.classList.remove('revealed');
+    btn.innerHTML =
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+      'Ver solução';
+  }
+}
+
+function updateProgress() {
+  document.getElementById('progressVal').textContent  = revealed + '/5';
+  document.getElementById('progressFill').style.width = (revealed / 5 * 100) + '%';
+}
+</script>
+</body>
+</html>
