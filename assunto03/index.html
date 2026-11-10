@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Java &mdash; Assunto 03 &mdash; Consultas com JPQL e Criteria API</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:          #f0f0f5;
+  --surface:     #ffffff;
+  --border:      #d8d5e8;
+  --accent:      #8d62ff;
+  --accent2:     #00c896;
+  --text:        #1a1730;
+  --muted:       #7a748f;
+  --green:       #155e35;
+  --green-bg:    #d6f5e5;
+  --green-border:#6edaa8;
+  --red:         #7a1f1f;
+  --red-bg:      #fde8e8;
+  --red-border:  #f0a0a0;
+  --radius:      10px;
+  --glow:        0 0 18px rgba(141,98,255,0.15);
+  --grad:        linear-gradient(270deg, #8d62ff 53.6%, #00ffbc 98.32%);
+  --surface2:    #f7f5ff;
+  --mint:        #00c896;
+  --danger:      #d63030;
+  --warn:        #d48a00;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+  padding: 0 0 60px;
+  background-image:
+    radial-gradient(ellipse 70% 40% at 50% -10%, rgba(141,98,255,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 30% at 80% 110%, rgba(0,200,150,0.06) 0%, transparent 70%);
+}
+header {
+  text-align: center;
+  padding: 36px 20px 28px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  background: var(--surface);
+  box-shadow: 0 2px 16px rgba(141,98,255,0.07);
+}
+header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 2px;
+  background: linear-gradient(90deg, transparent, #8d62ff, transparent);
+}
+.header-logo { height: 48px; margin-bottom: 14px; display: block; margin-left: auto; margin-right: auto; }
+.logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  background: var(--grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.logo span { opacity: 0.6; }
+.subtitle { color: var(--muted); font-size: .85rem; margin-top: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+.header-badge {
+  display: inline-block; margin-top: 12px; padding: 4px 16px; border-radius: 99px;
+  font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace;
+  background: linear-gradient(270deg, rgba(141,98,255,.15), rgba(0,255,188,.1));
+  border: 1px solid rgba(141,98,255,.3); color: var(--accent); letter-spacing: .06em;
+}
+.wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+/* ── AULA TABS ── */
+.aula-bar {
+  display: flex; gap: 4px; margin-bottom: 1.5rem;
+  background: var(--text); border-radius: 14px; padding: 6px;
+  box-shadow: 0 4px 20px rgba(26,23,48,0.18);
+}
+.aula-tab {
+  flex: 1; padding: 12px 20px; border-radius: 10px; border: none;
+  background: transparent; color: rgba(255,255,255,0.45); cursor: pointer;
+  font-size: 14px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+  transition: all .2s; letter-spacing: .02em;
+}
+.aula-tab.active { background: var(--grad); color: #fff; box-shadow: 0 2px 14px rgba(141,98,255,.45); }
+.aula-section { display: none; }
+.aula-section.active { display: block; }
+
+/* ── INNER TABS ── */
+.tab-bar {
+  display: flex; gap: 6px; margin-bottom: 1.5rem; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 14px; padding: 6px;
+  flex-wrap: wrap; box-shadow: 0 2px 10px rgba(141,98,255,0.06);
+}
+.tab {
+  flex: 1; min-width: 120px; padding: 9px 16px; border-radius: var(--radius);
+  border: none; background: transparent; color: var(--muted); cursor: pointer;
+  font-size: 13px; font-weight: 500; font-family: 'Space Grotesk', sans-serif; transition: all .2s;
+}
+.tab:hover:not(.active) { background: rgba(141,98,255,.08); color: var(--text); }
+.tab.active { background: var(--grad); color: #fff; font-weight: 700; box-shadow: 0 2px 12px rgba(141,98,255,.3); }
+.section { display: none; }
+.section.active { display: block; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.5rem; margin-bottom: 1.25rem; position: relative; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(141,98,255,.35), transparent);
+}
+.card-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700;
+  margin-bottom: 1rem; display: flex; align-items: center; gap: 10px; color: var(--text); flex-wrap: wrap;
+}
+.card p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+/* ── PILLS ── */
+.pill { display: inline-block; padding: 3px 11px; border-radius: 99px; font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.pill-grad  { background: rgba(141,98,255,.12); border: 1px solid rgba(141,98,255,.3);  color: var(--accent); }
+.pill-green { background: rgba(0,200,150,.12);  border: 1px solid rgba(0,200,150,.3);   color: #0a7a5a; }
+.pill-red   { background: rgba(214,48,48,.1);   border: 1px solid rgba(214,48,48,.25);  color: var(--danger); }
+.pill-amber { background: rgba(212,138,0,.1);   border: 1px solid rgba(212,138,0,.25);  color: var(--warn); }
+.pill-blue  { background: rgba(141,98,255,.12); border: 1px solid rgba(141,98,255,.25); color: #5a30cc; }
+.pill-java  { background: rgba(248,152,32,.12); border: 1px solid rgba(248,152,32,.35); color: #9a5000; }
+
+/* ── TABLE ── */
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+th {
+  background: rgba(141,98,255,.1); padding: 10px 14px; text-align: center;
+  font-weight: 700; font-size: 12px; color: var(--accent);
+  font-family: 'JetBrains Mono', monospace; letter-spacing: .05em; border-bottom: 1px solid var(--border);
+}
+td { padding: 10px 14px; text-align: center; border-bottom: 1px solid rgba(141,98,255,.08); font-size: 13px; font-family: 'JetBrains Mono', monospace; }
+td.left { text-align: left; font-family: 'Space Grotesk', sans-serif; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(141,98,255,.04); }
+
+/* ── CODE BLOCK ── */
+.code-block {
+  background: #1e1e2e; border: 1px solid #3a3a5c; border-radius: 10px;
+  padding: 16px 18px; margin: 12px 0; font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; line-height: 1.8; color: #cdd6f4; overflow-x: auto; white-space: pre;
+}
+.code-block .kw  { color: #cba6f7; }
+.code-block .typ { color: #89b4fa; }
+.code-block .str { color: #a6e3a1; }
+.code-block .num { color: #fab387; }
+.code-block .cmt { color: #6c7086; font-style: italic; }
+.code-block .cls { color: #f5c2e7; }
+.code-block .mtd { color: #89dceb; }
+.code-block .ann { color: #f9e2af; }
+
+/* ── SCORE BAR ── */
+.score-bar-area {
+  display: flex; align-items: center; gap: 16px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 18px; margin-bottom: 1.25rem; box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.score-val {
+  font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+  background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.score-label { font-size: 11px; color: var(--muted); }
+.score-track { flex: 1; background: #e5e2f0; border-radius: 99px; height: 8px; overflow: hidden; }
+.score-fill { height: 100%; border-radius: 99px; background: var(--grad); width: 0%; transition: width .4s cubic-bezier(.4,0,.2,1); }
+
+/* ── EXERCISES ── */
+.ex-block {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.25rem; margin-bottom: 1rem; border-left: 3px solid var(--accent);
+  transition: border-left-color .2s; box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.ex-block.done { border-left-color: var(--accent2); }
+.ex-q { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text); line-height: 1.55; }
+.ex-scenario { font-size: 13px; color: var(--muted); margin-bottom: 14px; line-height: 1.55; }
+.choices { display: flex; gap: 8px; flex-wrap: wrap; }
+.choice {
+  padding: 9px 20px; border-radius: 7px; border: 1.5px solid var(--border);
+  background: transparent; color: var(--text); cursor: pointer;
+  font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 600; transition: all .15s;
+}
+.choice:hover:not(:disabled) { background: rgba(141,98,255,.08); border-color: var(--accent); }
+.choice:disabled { cursor: default; }
+.choice.correct { background: var(--green-bg); color: #0a7a5a; border-color: var(--green-border); }
+.choice.wrong   { background: var(--red-bg);   color: var(--danger); border-color: var(--red-border); }
+.feedback { font-size: 13px; margin-top: 12px; padding: 10px 14px; border-radius: var(--radius); display: none; line-height: 1.6; }
+.feedback.show { display: block; }
+.feedback.ok { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.feedback.ko { background: var(--red-bg);   color: var(--red);   border: 1px solid var(--red-border); }
+
+/* ── CURIOSIDADES ── */
+.curi-item { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid rgba(141,98,255,.1); }
+.curi-item:last-of-type { border-bottom: none; }
+.curi-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+  background: linear-gradient(270deg, rgba(141,98,255,.15), rgba(0,200,150,.1));
+  border: 1px solid rgba(141,98,255,.25);
+}
+.curi-title { font-size: 14px; font-weight: 700; font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; color: var(--text); }
+.curi-body { font-size: 13px; color: var(--muted); line-height: 1.65; }
+.curi-body code { background: rgba(141,98,255,.12); color: #5a30cc; padding: 1px 6px; border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+
+/* ── LINKS ── */
+.link-item {
+  color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  text-decoration: none; word-break: break-all; transition: color .15s;
+}
+.link-item:hover { color: var(--mint); text-decoration: underline; }
+
+/* ── GRAD BTN ── */
+.grad-btn {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 14px;
+  padding: 10px 22px; border-radius: 8px; background: var(--grad); color: #fff;
+  border: none; cursor: pointer; font-size: 13px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace; text-decoration: none;
+  transition: opacity .2s, transform .15s; box-shadow: 0 3px 14px rgba(141,98,255,.3);
+}
+.grad-btn:hover { opacity: .88; transform: translateY(-1px); }
+
+/* ── INLINE CODE ── */
+.ic { background: rgba(141,98,255,.12); color: #5a30cc; padding: 1px 7px; border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+
+/* ── TIMELINE ── */
+.timeline-item { display: grid; grid-template-columns: 160px 1fr; gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(141,98,255,.1); }
+.timeline-item:last-child { border-bottom: none; }
+.timeline-era { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--accent); line-height: 1.5; }
+.timeline-body { font-size: 13px; color: var(--muted); line-height: 1.65; }
+.timeline-body strong { color: var(--text); }
+
+/* ── TYPE PICKER (SIMULADOR) ── */
+.type-btns { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 14px; }
+.type-btn {
+  padding: 8px 16px; border-radius: 99px; border: 1.5px solid var(--border);
+  background: transparent; font-size: 12px; font-weight: 700; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace; color: var(--muted); transition: all .15s;
+}
+.type-btn:hover { border-color: var(--accent); color: var(--text); }
+.type-btn.active { background: var(--grad); color: #fff; border-color: transparent; box-shadow: 0 2px 10px rgba(141,98,255,.3); }
+
+.output-block {
+  background: #12121e; border: 1px solid #2a2a40; border-radius: 8px;
+  padding: 14px 18px; margin-top: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.8;
+  color: #a6e3a1; overflow-x: auto; white-space: pre;
+}
+.output-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  color: var(--muted); letter-spacing: .07em; text-transform: uppercase;
+  margin: 12px 0 4px;
+}
+.warn-block {
+  background: rgba(212,138,0,.08); border: 1px solid rgba(212,138,0,.25); border-radius: 8px;
+  padding: 10px 14px; margin-top: 10px; font-size: 12px; color: var(--warn); line-height: 1.6;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── STEPPER (SIMULADOR) ── */
+.stepper { display: flex; gap: 4px; flex-wrap: wrap; margin: 4px 0 14px; }
+.step-btn {
+  flex: 1; min-width: 90px; padding: 10px 8px; border-radius: 8px; border: 1.5px solid var(--border);
+  background: transparent; font-size: 11px; font-weight: 700; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace; color: var(--muted); transition: all .15s; text-align: center;
+}
+.step-btn:hover { border-color: var(--accent); color: var(--text); }
+.step-btn.active { background: var(--grad); color: #fff; border-color: transparent; box-shadow: 0 2px 10px rgba(141,98,255,.3); }
+.step-btn.past { border-color: var(--accent2); color: #0a7a5a; }
+
+footer { text-align: center; margin-top: 3rem; font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+footer span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; }
+
+@media (max-width: 600px) {
+  .tab { min-width: 80px; font-size: 12px; }
+  .timeline-item { grid-template-columns: 1fr; gap: 4px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <img class="header-logo" src="https://capacitabrasil.irede.org.br/assets/capacitaLogo-Ct3BEyem.png" alt="Capacita Brasil"/>
+  <div class="logo">&#x2615; <span>//</span> Java</div>
+  <div class="subtitle">Desenvolvimento Java &mdash; Aula Interativa</div>
+  <div class="header-badge">Assunto 03 &mdash; Aulas 05 e 06 &mdash; Consultas com JPQL e Criteria API</div>
+</header>
+
+<div class="wrap">
+
+  <a href="../index.html#assunto03" style="display:inline-block;margin-bottom:1rem;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--muted);text-decoration:none">&#x2190; Voltar ao Sumário</a>
+
+  <div class="aula-bar">
+    <button class="aula-tab active">&#x1F4C5; 10 e 12/11 &mdash; Consultas com JPQL e Criteria API</button>
+  </div>
+
+  <div id="aula01" class="aula-section active">
+
+  <div class="tab-bar">
+    <button class="tab active"  onclick="showTab('resumo1',this)">&#x1F4D8; Resumo</button>
+    <button class="tab"         onclick="showTab('simulador1',this)">&#x26A1; Simulador</button>
+    <button class="tab"         onclick="showTab('exercicios1',this)">&#x1F3AF; Exercícios</button>
+    <button class="tab"         onclick="showTab('questionarios1',this)">&#x1F4DD; Questionários</button>
+    <button class="tab"         onclick="showTab('curiosidades1',this)">&#x1F680; Curiosidades</button>
+    <button class="tab"         onclick="showTab('links1',this)">&#x1F517; Links</button>
+  </div>
+
+  <!-- ═══ RESUMO ═══ -->
+  <div id="resumo1" class="section active">
+
+    <!-- Card 1: O que vamos construir -->
+    <div class="card">
+      <div class="card-title">&#x1F3AF; O que vamos construir <span class="pill pill-grad">Task Manager API</span> <span class="pill pill-java">v0.1.0</span></div>
+      <p>Até a aula 04, o <span class="ic">TarefaRepository</span> só tinha os métodos prontos do <span class="ic">JpaRepository</span> (<span class="ic">save</span>, <span class="ic">findById</span>, <span class="ic">findAll</span>...). Nesta semana ele aprende a <strong style="color:var(--text)">fazer perguntas</strong> ao banco: primeiro com <strong style="color:var(--text)">JPQL</strong> e depois com a <strong style="color:var(--text)">Criteria API</strong>, incluindo ordenação, paginação e filtros dinâmicos.</p>
+      <table>
+        <tr><th>Aula</th><th>O que entra no projeto</th><th>Tag</th></tr>
+        <tr><td>05 &middot; 10/11</td><td class="left">Escrever as <strong>consultas JPQL do <span class="ic">TarefaRepository</span></strong> com <span class="ic">@Query</span>: parâmetros nomeados, <span class="ic">JOIN</span> / <span class="ic">JOIN FETCH</span>, <span class="ic">ORDER BY</span>, agregação e uma consulta em SQL nativo.</td><td><span class="ic">aula-05</span></td></tr>
+        <tr><td>06 &middot; 12/11</td><td class="left">Implementar a <strong>busca com filtros dinâmicos</strong> (Criteria API) e a <strong>paginação</strong>. Fecha o <strong>Marco 1 &middot; Persistência</strong>.</td><td><span class="ic">aula-06</span><br/><span class="ic">v0.1.0</span></td></tr>
+      </table>
+      <p style="margin-top:6px">Ponto de partida (fim da aula 04) e onde cada coisa nova vai morar:</p>
+      <div class="code-block"><span class="cls">Usuario</span> <span class="num">1</span> ──── <span class="num">N</span> <span class="cls">Tarefa</span> <span class="num">N</span> ──── <span class="num">N</span> <span class="cls">Etiqueta</span>          <span class="cmt">tabelas: usuarios, tarefas,</span>
+                  │                             <span class="cmt">tarefa_etiqueta, etiquetas</span>
+                  └── <span class="typ">Prioridade</span> (BAIXA, MEDIA, ALTA)
+
+br.org.irede.taskmanagerapi.repository
+ ├── <span class="cls">TarefaRepository</span>.java             <span class="cmt">← aula 05: métodos com @Query</span>
+ ├── <span class="cls">TarefaRepositoryCustom</span>.java       <span class="cmt">← aula 06: assinaturas da busca</span>
+ └── <span class="cls">TarefaRepositoryCustomImpl</span>.java   <span class="cmt">← aula 06: Criteria API com EntityManager</span></div>
+      <p style="margin-top:6px">Todos os exemplos desta página usam esta massa de dados, gravada pelo <span class="ic">CommandLineRunner</span> da <span class="ic">TaskmanagerApiApplication</span>:</p>
+      <div class="output-label">taskmanager=# SELECT id, titulo, prioridade, concluida, prazo, usuario_id FROM tarefas;</div>
+      <div class="output-block"> id |          titulo           | prioridade | concluida |   prazo    | usuario_id
+----+---------------------------+------------+-----------+------------+------------
+  1 | Estudar JPA               | ALTA       | t         | 2026-11-05 |          1
+  2 | Configurar PostgreSQL     | MEDIA      | t         | 2026-11-03 |          2
+  3 | Escrever consultas JPQL   | ALTA       | f         | 2026-11-10 |          1
+  4 | Revisar JOIN FETCH        | MEDIA      | f         | 2026-11-12 |          1
+  5 | Montar busca com Criteria | ALTA       | f         | 2026-11-12 |          2
+  6 | Testar paginação          | BAIXA      | f         | 2026-11-14 |          2
+  7 | Fazer backup do banco     | BAIXA      | f         | 2026-11-20 |          1
+(7 rows)
+
+<span style="color:#89dceb">usuarios:</span> 1 = Ana Souza (ana@email.com) · 2 = Bruno Lima (bruno@email.com)
+<span style="color:#89dceb">etiquetas:</span> estudo → tarefas 1, 3, 4, 5 · banco → 2, 7 · urgente → 3, 5</div>
+      <div class="warn-block">&#x1F4CC; Os exemplos do slide usam a entidade <strong>Produto</strong> (preço, nome, categoria), como no projeto loja. Aqui cada exemplo aparece traduzido para <strong>Tarefa</strong>, com a mesma estrutura de código, para você reproduzir no Task Manager.</div>
+    </div>
+
+    <!-- Card 2: O que é JPQL -->
+    <div class="card">
+      <div class="card-title">&#x2753; O que é JPQL? <span class="pill pill-blue">Aula 05</span></div>
+      <p>A <strong style="color:var(--text)">JPQL</strong> (<em>Jakarta Persistence Query Language</em>) é uma <strong style="color:var(--text)">linguagem de consulta orientada a objetos</strong>, muito semelhante à sintaxe do SQL, mas com uma diferença fundamental: ela <strong style="color:var(--text)">opera sobre as suas entidades e seus atributos, não sobre tabelas e colunas</strong>.</p>
+      <p style="margin-top:6px">Isso a torna <strong style="color:var(--text)">independente do banco de dados</strong>: você escreve a consulta uma vez e o Hibernate a traduz para o SQL do banco configurado (o <em>dialeto</em>, que no Task Manager é o do PostgreSQL).</p>
+      <table>
+        <tr><th></th><th>JPQL (o que você escreve)</th><th>SQL (o que o Hibernate gera)</th></tr>
+        <tr><td class="left">Fonte</td><td>entidade <span class="ic">Tarefa</span></td><td>tabela <span class="ic">tarefas</span></td></tr>
+        <tr><td class="left">Campos</td><td>atributos <span class="ic">t.prazo</span>, <span class="ic">t.usuario</span></td><td>colunas <span class="ic">prazo</span>, <span class="ic">usuario_id</span></td></tr>
+        <tr><td class="left">Retorno</td><td>objetos <span class="ic">Tarefa</span></td><td>linhas e colunas</td></tr>
+        <tr><td class="left">Banco</td><td>qualquer um com dialeto</td><td>específico (PostgreSQL)</td></tr>
+      </table>
+      <div class="code-block" style="margin-top:10px"><span class="cmt">-- JPQL</span>
+<span class="kw">SELECT</span> t <span class="kw">FROM</span> <span class="cls">Tarefa</span> t <span class="kw">WHERE</span> t.concluida = <span class="kw">false</span></div>
+      <div class="output-label">Console (show-sql + format_sql ligados no application.properties)</div>
+      <div class="output-block">Hibernate:
+    select
+        t1_0.id,
+        t1_0.concluida,
+        t1_0.descricao,
+        t1_0.prazo,
+        t1_0.prioridade,
+        t1_0.titulo,
+        t1_0.usuario_id
+    from
+        tarefas t1_0
+    where
+        t1_0.concluida=false</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">Tarefa</strong> é o nome da <strong style="color:var(--text)">classe</strong> (com T maiúsculo). Escrever <span class="ic">FROM tarefas</span> na JPQL gera erro: <span class="ic">Could not resolve root entity 'tarefas'</span>.</p>
+      <p style="margin-top:6px">&#x1F539; <span class="ic">t</span> é o <strong style="color:var(--text)">alias</strong> (apelido) da entidade, usado para acessar os atributos (<span class="ic">t.titulo</span>, <span class="ic">t.usuario.email</span>).</p>
+    </div>
+
+    <!-- Card 3: Estrutura básica -->
+    <div class="card">
+      <div class="card-title">&#x1F9F1; Estrutura Básica da JPQL <span class="pill pill-blue">Aula 05</span> <span class="pill pill-grad">5 cláusulas</span></div>
+      <p>A estrutura é familiar para quem conhece SQL:</p>
+      <table>
+        <tr><th>Cláusula</th><th>Função (slide)</th><th>Exemplo no Task Manager</th></tr>
+        <tr><td><span class="ic">SELECT</span></td><td class="left">Especifica o que será retornado</td><td class="left"><span class="ic">SELECT t</span> (a entidade inteira) ou <span class="ic">SELECT t.titulo</span></td></tr>
+        <tr><td><span class="ic">FROM</span></td><td class="left">Especifica a entidade sobre a qual a consulta será executada</td><td class="left"><span class="ic">FROM Tarefa t</span></td></tr>
+        <tr><td><span class="ic">WHERE</span></td><td class="left">Filtra os resultados com base em condições</td><td class="left"><span class="ic">WHERE t.concluida = false</span></td></tr>
+        <tr><td><span class="ic">JOIN</span></td><td class="left">Navega entre entidades relacionadas</td><td class="left"><span class="ic">JOIN t.usuario u</span></td></tr>
+        <tr><td><span class="ic">ORDER BY</span></td><td class="left">Ordena os resultados</td><td class="left"><span class="ic">ORDER BY t.prazo ASC</span></td></tr>
+      </table>
+      <div class="output-label">Tudo junto: tarefas pendentes da Ana, da mais urgente para a menos urgente</div>
+      <div class="code-block"><span class="kw">SELECT</span> t                     <span class="cmt">-- o que retornar: objetos Tarefa</span>
+<span class="kw">FROM</span> <span class="cls">Tarefa</span> t                <span class="cmt">-- a entidade (não a tabela)</span>
+<span class="kw">JOIN</span> t.usuario u             <span class="cmt">-- navega pelo atributo mapeado com @ManyToOne</span>
+<span class="kw">WHERE</span> u.email = <span class="str">:email</span>
+  <span class="kw">AND</span> t.concluida = <span class="kw">false</span>
+<span class="kw">ORDER BY</span> t.prazo <span class="kw">ASC</span></div>
+      <div class="output-label">SQL gerado para o PostgreSQL</div>
+      <div class="output-block">Hibernate:
+    select
+        t1_0.id,
+        t1_0.concluida,
+        t1_0.descricao,
+        t1_0.prazo,
+        t1_0.prioridade,
+        t1_0.titulo,
+        t1_0.usuario_id
+    from
+        tarefas t1_0
+    join
+        usuarios u1_0
+            on u1_0.id=t1_0.usuario_id
+    where
+        u1_0.email=?
+        and t1_0.concluida=false
+    order by
+        t1_0.prazo</div>
+      <p style="margin-top:10px">&#x1F539; No <span class="ic">JOIN</span> você <strong style="color:var(--text)">não escreve a condição <span class="ic">ON</span></strong>: o Hibernate já sabe, pelo <span class="ic">@JoinColumn(name = "usuario_id")</span>, como ligar as tabelas.</p>
+      <p style="margin-top:6px">&#x1F539; <span class="ic">:email</span> é um <strong style="color:var(--text)">parâmetro nomeado</strong>. No SQL ele vira <span class="ic">?</span> e o valor é enviado separado pelo JDBC.</p>
+    </div>
+
+    <!-- Card 4: Consulta JPQL -->
+    <div class="card">
+      <div class="card-title">&#x1F50D; Consulta JPQL <span class="pill pill-blue">Aula 05</span> <span class="pill pill-green">TypedQuery</span></div>
+      <p>O código do slide, traduzido para o Task Manager. As quatro etapas são as mesmas: <strong style="color:var(--text)">string &rarr; query &rarr; executar &rarr; iterar</strong>.</p>
+      <div class="code-block"><span class="cmt">// 1. A string da consulta JPQL</span>
+<span class="typ">String</span> jpql = <span class="str">"SELECT t FROM Tarefa t WHERE t.concluida = false"</span>;
+
+<span class="cmt">// 2. Criar a Query (TypedQuery é preferível para segurança de tipo)</span>
+<span class="typ">TypedQuery</span>&lt;<span class="cls">Tarefa</span>&gt; query = em.<span class="mtd">createQuery</span>(jpql, <span class="cls">Tarefa</span>.<span class="kw">class</span>);
+
+<span class="cmt">// 3. Executar a consulta e obter os resultados</span>
+<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; tarefas = query.<span class="mtd">getResultList</span>();
+
+<span class="cmt">// 4. Iterar sobre os resultados</span>
+tarefas.<span class="mtd">forEach</span>(t -&gt; <span class="typ">System</span>.out.<span class="mtd">println</span>(t.<span class="mtd">getTitulo</span>()));</div>
+      <div class="output-label">Saída</div>
+      <div class="output-block"><span style="color:#cdd6f4">Escrever consultas JPQL
+Revisar JOIN FETCH
+Montar busca com Criteria
+Testar paginação
+Fazer backup do banco</span></div>
+      <table style="margin-top:10px">
+        <tr><th>Método</th><th>Quando usar</th></tr>
+        <tr><td><span class="ic">getResultList()</span></td><td class="left">Retorna uma <span class="ic">List</span>. Se nada for encontrado, a lista vem <strong>vazia</strong> (nunca <span class="ic">null</span>).</td></tr>
+        <tr><td><span class="ic">getSingleResult()</span></td><td class="left">Exatamente um resultado. Lança <span class="ic">NoResultException</span> se não houver nenhum e <span class="ic">NonUniqueResultException</span> se houver mais de um.</td></tr>
+        <tr><td><span class="ic">setParameter("nome", valor)</span></td><td class="left">Preenche um parâmetro nomeado (<span class="ic">:nome</span>) da consulta.</td></tr>
+      </table>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">De onde vem o <span class="ic">em</span>?</strong> No loja você o criava com o <span class="ic">JPAUtil</span>. No Spring Boot, basta pedir que ele seja injetado:</p>
+      <div class="code-block"><span class="ann">@PersistenceContext</span>
+<span class="kw">private</span> <span class="typ">EntityManager</span> em;   <span class="cmt">// jakarta.persistence.EntityManager</span></div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">O jeito Spring Data: <span class="ic">@Query</span>.</strong> No <span class="ic">TarefaRepository</span>, a mesma JPQL vira um método. O Spring cria a <span class="ic">TypedQuery</span>, preenche os parâmetros e chama <span class="ic">getResultList()</span> por você:</p>
+      <div class="code-block"><span class="kw">public interface</span> <span class="cls">TarefaRepository</span> <span class="kw">extends</span> <span class="typ">JpaRepository</span>&lt;<span class="cls">Tarefa</span>, <span class="typ">Long</span>&gt; {
+
+    <span class="ann">@Query</span>(<span class="str">"SELECT t FROM Tarefa t WHERE t.concluida = false"</span>)
+    <span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">listarPendentes</span>();
+
+    <span class="ann">@Query</span>(<span class="str">"SELECT t FROM Tarefa t WHERE t.prioridade = :prioridade AND t.concluida = :concluida"</span>)
+    <span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscarPorPrioridade</span>(<span class="ann">@Param</span>(<span class="str">"prioridade"</span>) <span class="typ">Prioridade</span> prioridade,
+                                     <span class="ann">@Param</span>(<span class="str">"concluida"</span>) <span class="kw">boolean</span> concluida);
+}</div>
+      <div class="warn-block">&#x1F4A1; Use sempre parâmetros (<span class="ic">:prioridade</span>) em vez de concatenar valores na string. O valor viaja separado da consulta, e o Hibernate cuida do tipo (o enum vira o texto <span class="ic">'ALTA'</span> por causa do <span class="ic">EnumType.STRING</span>). Imports: <span class="ic">org.springframework.data.jpa.repository.Query</span> e <span class="ic">org.springframework.data.repository.query.Param</span>.</div>
+    </div>
+
+    <!-- Card 5: JPQL no Task Manager -->
+    <div class="card">
+      <div class="card-title">&#x1F517; JOIN, JOIN FETCH e Agregações <span class="pill pill-blue">Aula 05</span> <span class="pill pill-amber">Relações</span></div>
+      <p>As relações mapeadas no assunto 02 agora viram <strong style="color:var(--text)">caminhos</strong> nas consultas. Três usos que entram no <span class="ic">TarefaRepository</span>:</p>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">JOIN para filtrar</strong> por um atributo da entidade relacionada (inclusive em N:N):</p>
+      <div class="code-block"><span class="ann">@Query</span>(<span class="str">"SELECT t FROM Tarefa t JOIN t.etiquetas e WHERE e.nome = :nome"</span>)
+<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">listarPorEtiqueta</span>(<span class="ann">@Param</span>(<span class="str">"nome"</span>) <span class="typ">String</span> nome);</div>
+      <div class="output-block">    from
+        tarefas t1_0
+    join
+        tarefa_etiqueta e1_0
+            on t1_0.id=e1_0.tarefa_id
+    join
+        etiquetas e1_1
+            on e1_1.id=e1_0.etiqueta_id
+    where
+        e1_1.nome=?</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">JOIN FETCH para carregar junto</strong>: o <span class="ic">JOIN</span> comum só filtra; o <span class="ic">JOIN FETCH</span> também traz o usuário no mesmo <span class="ic">SELECT</span>. É a cura do problema <strong style="color:var(--text)">N+1</strong> visto na aula 04:</p>
+      <div class="code-block"><span class="ann">@Query</span>(<span class="str">"SELECT t FROM Tarefa t JOIN FETCH t.usuario u WHERE u.email = :email ORDER BY t.prazo"</span>)
+<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">listarPorUsuario</span>(<span class="ann">@Param</span>(<span class="str">"email"</span>) <span class="typ">String</span> email);</div>
+      <table>
+        <tr><th>Consulta</th><th>SELECTs no console</th></tr>
+        <tr><td class="left"><span class="ic">SELECT t FROM Tarefa t</span> + <span class="ic">t.getUsuario().getNome()</span></td><td>1 (tarefas) + 1 por usuário diferente</td></tr>
+        <tr><td class="left"><span class="ic">SELECT t FROM Tarefa t JOIN FETCH t.usuario</span></td><td><strong>1</strong></td></tr>
+      </table>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">Funções de agregação</strong> (<span class="ic">COUNT</span>, <span class="ic">SUM</span>, <span class="ic">AVG</span>, <span class="ic">MIN</span>, <span class="ic">MAX</span>) com <span class="ic">GROUP BY</span>. Quando o <span class="ic">SELECT</span> devolve mais de um valor, cada linha vem como um <span class="ic">Object[]</span>:</p>
+      <div class="code-block"><span class="ann">@Query</span>(<span class="str">"SELECT t.prioridade, COUNT(t) FROM Tarefa t GROUP BY t.prioridade"</span>)
+<span class="typ">List</span>&lt;<span class="typ">Object</span>[]&gt; <span class="mtd">contarPorPrioridade</span>();
+
+<span class="cmt">// uso</span>
+<span class="kw">for</span> (<span class="typ">Object</span>[] linha : tarefaRepository.<span class="mtd">contarPorPrioridade</span>()) {
+    <span class="typ">System</span>.out.<span class="mtd">println</span>(linha[<span class="num">0</span>] + <span class="str">": "</span> + linha[<span class="num">1</span>]);   <span class="cmt">// ALTA: 3</span>
+}</div>
+      <div class="warn-block">&#x1F4CC; Como <span class="ic">Tarefa.usuario</span> usa o fetch padrão do <span class="ic">@ManyToOne</span> (EAGER), uma JPQL sem <span class="ic">JOIN FETCH</span> faz o Hibernate disparar SELECTs extras em <span class="ic">usuarios</span> logo depois da consulta. Com <span class="ic">JOIN FETCH</span>, tudo vem em uma ida ao banco.</div>
+    </div>
+
+    <!-- Card 6: Criteria API -->
+    <div class="card">
+      <div class="card-title">&#x1F3D7; Criteria API <span class="pill pill-blue">Aula 06</span></div>
+      <p>&#x1F539; <strong style="color:var(--text)">API fluente e programática para construir consultas.</strong> Em vez de escrever uma <span class="ic">String</span>, você usa <strong style="color:var(--text)">objetos e métodos</strong> para montar a consulta passo a passo.</p>
+      <p style="margin-top:6px">&#x1F539; <strong style="color:var(--text)">Vantagens:</strong></p>
+      <table>
+        <tr><th>Vantagem</th><th>O que significa</th></tr>
+        <tr><td class="left"><strong>Segurança de Tipo</strong> (<em>Type-Safety</em>)</td><td class="left">A consulta é código Java: <span class="ic">CriteriaQuery&lt;Tarefa&gt;</span> só devolve <span class="ic">Tarefa</span>, e o compilador confere os tipos de métodos e parâmetros. Um erro de digitação dentro de uma String JPQL só aparece quando a consulta é criada.</td></tr>
+        <tr><td class="left"><strong>Criação Dinâmica</strong></td><td class="left">Partes da consulta podem ser incluídas ou não com <span class="ic">if</span>, sem concatenar pedaços de String. Ideal para telas de busca com filtros opcionais.</td></tr>
+      </table>
+      <div class="code-block" style="margin-top:10px"><span class="cmt">// JPQL: a consulta é uma String</span>
+<span class="str">"SELECT t FROM Tarefa t WHERE t.prioridade = :prioridade"</span>
+
+<span class="cmt">// Criteria: a mesma consulta, montada com objetos</span>
+cq.<span class="mtd">select</span>(root).<span class="mtd">where</span>(cb.<span class="mtd">equal</span>(root.<span class="mtd">get</span>(<span class="str">"prioridade"</span>), prioridade));</div>
+    </div>
+
+    <!-- Card 7: Componentes -->
+    <div class="card">
+      <div class="card-title">&#x1F9E9; Criteria API: Componentes Principais <span class="pill pill-blue">Aula 06</span> <span class="pill pill-grad">cb &middot; cq &middot; root</span></div>
+      <table>
+        <tr><th>Componente</th><th>Papel (slide)</th><th>Como obter</th></tr>
+        <tr><td><span class="ic">CriteriaBuilder</span> (cb)</td><td class="left">Usado para criar a <span class="ic">CriteriaQuery</span> e todas as partes da consulta (predicados, ordenações, etc.).</td><td><span class="ic">em.getCriteriaBuilder()</span></td></tr>
+        <tr><td><span class="ic">CriteriaQuery&lt;T&gt;</span> (cq)</td><td class="left">Objeto que será "montado" com as cláusulas SELECT, FROM, WHERE. O <span class="ic">&lt;T&gt;</span> define o tipo de retorno da consulta.</td><td><span class="ic">cb.createQuery(Tarefa.class)</span></td></tr>
+        <tr><td><span class="ic">Root&lt;E&gt;</span> (root)</td><td class="left">Representa a entidade <strong>FROM</strong> da consulta.</td><td><span class="ic">cq.from(Tarefa.class)</span></td></tr>
+      </table>
+      <div class="code-block" style="margin-top:10px"><span class="typ">EntityManager</span> em
+  └─ em.<span class="mtd">getCriteriaBuilder</span>()           → <span class="typ">CriteriaBuilder</span> cb       <span class="cmt">(a fábrica)</span>
+       └─ cb.<span class="mtd">createQuery</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>)  → <span class="typ">CriteriaQuery</span>&lt;<span class="cls">Tarefa</span>&gt; cq <span class="cmt">(a consulta)</span>
+            └─ cq.<span class="mtd">from</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>)     → <span class="typ">Root</span>&lt;<span class="cls">Tarefa</span>&gt; root      <span class="cmt">(o FROM)</span>
+
+root.<span class="mtd">get</span>(<span class="str">"prazo"</span>)                    → caminho para o atributo  <span class="cmt">(t.prazo)</span>
+cb.<span class="mtd">equal</span>(...), cb.<span class="mtd">like</span>(...)          → <span class="typ">Predicate</span>                <span class="cmt">(uma condição do WHERE)</span>
+cb.<span class="mtd">asc</span>(...), cb.<span class="mtd">desc</span>(...)           → <span class="typ">Order</span>                    <span class="cmt">(ORDER BY)</span></div>
+      <p style="margin-top:10px">&#x1F539; Métodos do <span class="ic">CriteriaBuilder</span> mais usados para criar predicados:</p>
+      <table>
+        <tr><th>CriteriaBuilder</th><th>JPQL equivalente</th></tr>
+        <tr><td><span class="ic">cb.equal(a, b)</span> / <span class="ic">cb.notEqual(a, b)</span></td><td><span class="ic">a = b</span> / <span class="ic">a &lt;&gt; b</span></td></tr>
+        <tr><td><span class="ic">cb.greaterThan</span> / <span class="ic">cb.lessThan</span></td><td><span class="ic">&gt;</span> / <span class="ic">&lt;</span></td></tr>
+        <tr><td><span class="ic">cb.greaterThanOrEqualTo</span> / <span class="ic">cb.lessThanOrEqualTo</span></td><td><span class="ic">&gt;=</span> / <span class="ic">&lt;=</span></td></tr>
+        <tr><td><span class="ic">cb.like(a, "%x%")</span></td><td><span class="ic">a LIKE '%x%'</span></td></tr>
+        <tr><td><span class="ic">cb.isNull(a)</span> / <span class="ic">cb.isNotNull(a)</span></td><td><span class="ic">a IS NULL</span> / <span class="ic">a IS NOT NULL</span></td></tr>
+        <tr><td><span class="ic">cb.and(p1, p2)</span> / <span class="ic">cb.or(p1, p2)</span> / <span class="ic">cb.not(p)</span></td><td><span class="ic">AND</span> / <span class="ic">OR</span> / <span class="ic">NOT</span></td></tr>
+      </table>
+    </div>
+
+    <!-- Card 8: Consulta Criteria -->
+    <div class="card">
+      <div class="card-title">&#x1F6E0; Consulta Criteria API <span class="pill pill-blue">Aula 06</span> <span class="pill pill-green">4 etapas</span></div>
+      <p>O código do slide (produtos com preço maior que 500) traduzido para <strong style="color:var(--text)">tarefas com prazo depois de 12/11/2026</strong>:</p>
+      <div class="code-block"><span class="cmt">// 1. Obter os objetos de base</span>
+<span class="typ">CriteriaBuilder</span> cb = em.<span class="mtd">getCriteriaBuilder</span>();
+<span class="typ">CriteriaQuery</span>&lt;<span class="cls">Tarefa</span>&gt; cq = cb.<span class="mtd">createQuery</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>);
+<span class="typ">Root</span>&lt;<span class="cls">Tarefa</span>&gt; root = cq.<span class="mtd">from</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>); <span class="cmt">// FROM Tarefa</span>
+
+<span class="cmt">// 2. Construir a cláusula SELECT (neste caso, a entidade inteira)</span>
+cq.<span class="mtd">select</span>(root); <span class="cmt">// SELECT t</span>
+
+<span class="cmt">// 3. Construir a cláusula WHERE (os predicados)</span>
+<span class="typ">ParameterExpression</span>&lt;<span class="typ">LocalDate</span>&gt; prazoParam = cb.<span class="mtd">parameter</span>(<span class="typ">LocalDate</span>.<span class="kw">class</span>);
+<span class="typ">Predicate</span> predicado = cb.<span class="mtd">greaterThan</span>(root.<span class="mtd">get</span>(<span class="str">"prazo"</span>), prazoParam); <span class="cmt">// WHERE t.prazo &gt; ?</span>
+cq.<span class="mtd">where</span>(predicado);
+
+<span class="cmt">// 4. Criar e executar a TypedQuery</span>
+<span class="typ">TypedQuery</span>&lt;<span class="cls">Tarefa</span>&gt; query = em.<span class="mtd">createQuery</span>(cq);
+query.<span class="mtd">setParameter</span>(prazoParam, <span class="typ">LocalDate</span>.<span class="mtd">of</span>(<span class="num">2026</span>, <span class="num">11</span>, <span class="num">12</span>));
+<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; tarefas = query.<span class="mtd">getResultList</span>();</div>
+      <div class="output-label">Console</div>
+      <div class="output-block">Hibernate:
+    select
+        t1_0.id,
+        t1_0.concluida,
+        t1_0.descricao,
+        t1_0.prazo,
+        t1_0.prioridade,
+        t1_0.titulo,
+        t1_0.usuario_id
+    from
+        tarefas t1_0
+    where
+        t1_0.prazo&gt;?
+<span style="color:#cdd6f4">[Testar paginação, Fazer backup do banco]</span></div>
+      <p style="margin-top:10px">&#x1F539; <span class="ic">ParameterExpression</span> é o "<span class="ic">?</span>" da Criteria: um parâmetro tipado que recebe o valor depois, no <span class="ic">setParameter</span>.</p>
+      <p style="margin-top:6px">&#x1F539; Imports: <span class="ic">jakarta.persistence.TypedQuery</span> e, da Criteria, <span class="ic">jakarta.persistence.criteria.*</span> (<span class="ic">CriteriaBuilder</span>, <span class="ic">CriteriaQuery</span>, <span class="ic">Root</span>, <span class="ic">Predicate</span>, <span class="ic">ParameterExpression</span>).</p>
+    </div>
+
+    <!-- Card 9: Ordenação -->
+    <div class="card">
+      <div class="card-title">&#x2195; Ordenação de Resultados <span class="pill pill-blue">Aulas 05 e 06</span> <span class="pill pill-green">ORDER BY</span></div>
+      <p><strong style="color:var(--text)">Ordenação com JPQL:</strong> a cláusula <span class="ic">ORDER BY</span> funciona de forma muito similar ao SQL. Você especifica o <strong style="color:var(--text)">atributo da entidade</strong> pelo qual deseja ordenar, seguido opcionalmente por <span class="ic">ASC</span> (ascendente, <strong style="color:var(--text)">o padrão</strong>) ou <span class="ic">DESC</span> (descendente).</p>
+      <div class="code-block"><span class="cmt">// Ordenar tarefas pelo título em ordem alfabética</span>
+<span class="kw">SELECT</span> t <span class="kw">FROM</span> <span class="cls">Tarefa</span> t <span class="kw">ORDER BY</span> t.titulo <span class="kw">ASC</span>
+
+<span class="cmt">// Ordenar tarefas do prazo mais distante para o mais próximo</span>
+<span class="kw">SELECT</span> t <span class="kw">FROM</span> <span class="cls">Tarefa</span> t <span class="kw">ORDER BY</span> t.prazo <span class="kw">DESC</span>
+
+<span class="cmt">// Vários critérios: primeiro o prazo; no empate, o título</span>
+<span class="kw">SELECT</span> t <span class="kw">FROM</span> <span class="cls">Tarefa</span> t <span class="kw">ORDER BY</span> t.prazo <span class="kw">ASC</span>, t.titulo <span class="kw">ASC</span></div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">Na Criteria API</strong>, a ordenação é criada pelo <span class="ic">CriteriaBuilder</span>:</p>
+      <div class="code-block">cq.<span class="mtd">orderBy</span>(cb.<span class="mtd">asc</span>(root.<span class="mtd">get</span>(<span class="str">"prazo"</span>)), cb.<span class="mtd">asc</span>(root.<span class="mtd">get</span>(<span class="str">"titulo"</span>)));
+cq.<span class="mtd">orderBy</span>(cb.<span class="mtd">desc</span>(root.<span class="mtd">get</span>(<span class="str">"prazo"</span>)));</div>
+      <div class="warn-block">&#x26A0; Duas pegadinhas no PostgreSQL: (1) com <span class="ic">EnumType.STRING</span>, <span class="ic">ORDER BY t.prioridade</span> ordena o <strong>texto</strong>: ALTA, BAIXA, MEDIA (ordem alfabética, não de importância). (2) Em <span class="ic">DESC</span>, os valores <span class="ic">NULL</span> aparecem <strong>primeiro</strong>: tarefas sem prazo vão para o topo da lista.</div>
+    </div>
+
+    <!-- Card 10: Paginação -->
+    <div class="card">
+      <div class="card-title">&#x1F4C4; Paginação de Resultados <span class="pill pill-blue">Aula 06</span> <span class="pill pill-amber">OFFSET / FETCH</span></div>
+      <p><strong style="color:var(--text)">Paginação</strong> é o ato de dividir um grande conjunto de resultados em "<strong style="color:var(--text)">páginas</strong>" menores e mais gerenciáveis. O código do slide, com tarefas:</p>
+      <div class="code-block"><span class="kw">public</span> <span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscarTarefasPaginado</span>(<span class="kw">int</span> pagina, <span class="kw">int</span> tamanhoPagina) {
+    <span class="typ">String</span> jpql = <span class="str">"SELECT t FROM Tarefa t ORDER BY t.prazo DESC"</span>;
+
+    <span class="kw">int</span> primeiroResultado = (pagina - <span class="num">1</span>) * tamanhoPagina;
+
+    <span class="kw">return</span> em.<span class="mtd">createQuery</span>(jpql, <span class="cls">Tarefa</span>.<span class="kw">class</span>)
+             .<span class="mtd">setFirstResult</span>(primeiroResultado)
+             .<span class="mtd">setMaxResults</span>(tamanhoPagina)
+             .<span class="mtd">getResultList</span>();
+}
+
+<span class="cmt">// Chamada do método para buscar a página 2, com 3 tarefas por página:</span>
+<span class="cmt">// List&lt;Tarefa&gt; tarefasDaPagina2 = buscarTarefasPaginado(2, 3);</span></div>
+      <table style="margin-top:10px">
+        <tr><th>pagina</th><th>tamanhoPagina</th><th>setFirstResult</th><th>Linhas (ordenadas)</th></tr>
+        <tr><td>1</td><td>3</td><td>0</td><td>1ª a 3ª</td></tr>
+        <tr><td>2</td><td>3</td><td>3</td><td>4ª a 6ª</td></tr>
+        <tr><td>3</td><td>3</td><td>6</td><td>7ª (página incompleta)</td></tr>
+      </table>
+      <div class="output-label">SQL da página 2 no PostgreSQL</div>
+      <div class="output-block">Hibernate:
+    select
+        t1_0.id,
+        ...
+        t1_0.usuario_id
+    from
+        tarefas t1_0
+    order by
+        t1_0.prazo desc
+    offset
+        ? rows
+    fetch
+        first ? rows only</div>
+      <p style="margin-top:10px">&#x1F539; A paginação acontece <strong style="color:var(--text)">no banco</strong>: <span class="ic">setFirstResult</span> vira <span class="ic">OFFSET</span> e <span class="ic">setMaxResults</span> vira <span class="ic">FETCH FIRST</span>. Só as linhas da página trafegam até o Java.</p>
+      <p style="margin-top:6px">&#x1F539; <strong style="color:var(--text)">Sempre ordene ao paginar.</strong> Sem <span class="ic">ORDER BY</span>, o banco não garante a ordem, e uma tarefa pode aparecer em duas páginas (ou em nenhuma).</p>
+      <p style="margin-top:6px">&#x1F539; <strong style="color:var(--text)">No Spring Data</strong>, a paginação usa <span class="ic">Pageable</span> e devolve um <span class="ic">Page</span>, que já traz o total de registros e de páginas:</p>
+      <div class="code-block"><span class="ann">@Query</span>(<span class="str">"SELECT t FROM Tarefa t WHERE t.concluida = false"</span>)
+<span class="typ">Page</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">listarPendentes</span>(<span class="typ">Pageable</span> pageable);
+
+<span class="cmt">// uso: página 2 (índice 1!), 3 por página, ordenadas por prazo</span>
+<span class="typ">Page</span>&lt;<span class="cls">Tarefa</span>&gt; pagina = tarefaRepository.<span class="mtd">listarPendentes</span>(
+        <span class="typ">PageRequest</span>.<span class="mtd">of</span>(<span class="num">1</span>, <span class="num">3</span>, <span class="typ">Sort</span>.<span class="mtd">by</span>(<span class="str">"prazo"</span>)));
+pagina.<span class="mtd">getContent</span>();        <span class="cmt">// as tarefas da página</span>
+pagina.<span class="mtd">getTotalElements</span>();  <span class="cmt">// 5 (faz um SELECT count(...) a mais)</span>
+pagina.<span class="mtd">getTotalPages</span>();     <span class="cmt">// 2</span></div>
+      <div class="warn-block">&#x26A0; No slide, a página começa em <strong>1</strong> (por isso o <span class="ic">pagina - 1</span>). No Spring Data, o <span class="ic">PageRequest.of(pagina, tamanho)</span> começa em <strong>0</strong>: <span class="ic">PageRequest.of(1, 3)</span> é a <strong>segunda</strong> página.</div>
+    </div>
+
+    <!-- Card 11: Filtros dinâmicos -->
+    <div class="card">
+      <div class="card-title">&#x1F39B; Filtros Dinâmicos com Criteria API <span class="pill pill-blue">Aula 06</span> <span class="pill pill-grad">List&lt;Predicate&gt;</span></div>
+      <p>A <strong style="color:var(--text)">verdadeira força da Criteria API</strong> está na construção de consultas com <strong style="color:var(--text)">filtros dinâmicos</strong>. Imagine uma tela de busca de tarefas onde o usuário pode preencher <strong style="color:var(--text)">parte do título</strong>, um <strong style="color:var(--text)">prazo mínimo</strong> e uma <strong style="color:var(--text)">prioridade</strong>, todos opcionais. (No slide: nome, preço mínimo e categoria do produto.)</p>
+      <div class="code-block"><span class="kw">public</span> <span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscaDinamica</span>(<span class="typ">String</span> titulo, <span class="typ">LocalDate</span> prazoMin, <span class="typ">Prioridade</span> prioridade) {
+    <span class="typ">CriteriaBuilder</span> cb = em.<span class="mtd">getCriteriaBuilder</span>();
+    <span class="typ">CriteriaQuery</span>&lt;<span class="cls">Tarefa</span>&gt; cq = cb.<span class="mtd">createQuery</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>);
+    <span class="typ">Root</span>&lt;<span class="cls">Tarefa</span>&gt; root = cq.<span class="mtd">from</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>);
+
+    <span class="typ">List</span>&lt;<span class="typ">Predicate</span>&gt; predicates = <span class="kw">new</span> <span class="typ">ArrayList</span>&lt;&gt;();
+
+    <span class="kw">if</span> (titulo != <span class="kw">null</span> &amp;&amp; !titulo.<span class="mtd">trim</span>().<span class="mtd">isEmpty</span>()) {
+        predicates.<span class="mtd">add</span>(cb.<span class="mtd">like</span>(root.<span class="mtd">get</span>(<span class="str">"titulo"</span>), <span class="str">"%"</span> + titulo + <span class="str">"%"</span>));
+    }
+    <span class="kw">if</span> (prazoMin != <span class="kw">null</span>) {
+        predicates.<span class="mtd">add</span>(cb.<span class="mtd">greaterThanOrEqualTo</span>(root.<span class="mtd">get</span>(<span class="str">"prazo"</span>), prazoMin));
+    }
+    <span class="kw">if</span> (prioridade != <span class="kw">null</span>) {
+        predicates.<span class="mtd">add</span>(cb.<span class="mtd">equal</span>(root.<span class="mtd">get</span>(<span class="str">"prioridade"</span>), prioridade));
+    }
+
+    <span class="cmt">// Combina todos os predicados da lista com "AND"</span>
+    cq.<span class="mtd">where</span>(predicates.<span class="mtd">toArray</span>(<span class="kw">new</span> <span class="typ">Predicate</span>[<span class="num">0</span>]));
+
+    <span class="kw">return</span> em.<span class="mtd">createQuery</span>(cq).<span class="mtd">getResultList</span>();
+}</div>
+      <table style="margin-top:10px">
+        <tr><th>Chamada</th><th>WHERE gerado</th><th>Resultado (ids)</th></tr>
+        <tr><td class="left"><span class="ic">buscaDinamica(null, null, null)</span></td><td><em>sem WHERE</em></td><td>1 a 7</td></tr>
+        <tr><td class="left"><span class="ic">buscaDinamica("JPQL", null, null)</span></td><td class="left"><span class="ic">titulo like ?</span></td><td>3</td></tr>
+        <tr><td class="left"><span class="ic">buscaDinamica(null, 12/11, ALTA)</span></td><td class="left"><span class="ic">prazo&gt;=? and prioridade=?</span></td><td>5</td></tr>
+        <tr><td class="left"><span class="ic">buscaDinamica("a", 10/11, null)</span></td><td class="left"><span class="ic">titulo like ? and prazo&gt;=?</span></td><td>3, 4, 5, 6, 7</td></tr>
+      </table>
+      <p style="margin-top:10px">&#x1F539; Cada filtro preenchido vira um <span class="ic">Predicate</span> na lista. O <span class="ic">cq.where(...)</span> com vários predicados os combina com <strong style="color:var(--text)">AND</strong>; com a lista vazia, a consulta fica <strong style="color:var(--text)">sem WHERE</strong> e devolve tudo.</p>
+      <p style="margin-top:6px">&#x1F539; Em JPQL, o mesmo resultado exigiria montar a String com vários <span class="ic">if</span> e cuidar de onde entra o <span class="ic">WHERE</span> e onde entra o <span class="ic">AND</span>. É aí que a Criteria brilha.</p>
+      <div class="warn-block">&#x1F4A1; No PostgreSQL, <span class="ic">LIKE</span> diferencia maiúsculas de minúsculas: <span class="ic">"jpql"</span> não encontra "Escrever consultas JPQL". Para ignorar a caixa, use <span class="ic">cb.like(cb.lower(root.get("titulo")), "%" + titulo.toLowerCase() + "%")</span>.</div>
+    </div>
+
+    <!-- Card 12: Comparação -->
+    <div class="card">
+      <div class="card-title">&#x2696; JPQL, Criteria API e SQL Nativo <span class="pill pill-blue">Aula 06</span> <span class="pill pill-grad">Comparativo</span></div>
+      <table>
+        <tr><th>Característica</th><th>JPQL</th><th>Criteria API</th><th>SQL Nativo</th></tr>
+        <tr><td class="left"><strong>Abstração</strong></td><td>Alta (Entidades)</td><td>Alta (Entidades)</td><td>Nenhuma (Tabelas)</td></tr>
+        <tr><td class="left"><strong>Segurança de Tipo</strong></td><td>Em tempo de execução</td><td>Em tempo de compilação</td><td>Nenhuma</td></tr>
+        <tr><td class="left"><strong>Uso Ideal</strong></td><td>Consultas estáticas</td><td>Consultas dinâmicas</td><td>Features do BD / Otimização</td></tr>
+        <tr><td class="left"><strong>Portabilidade</strong></td><td>Alta</td><td>Alta</td><td>Baixa</td></tr>
+        <tr><td class="left"><strong>Verbosidade</strong></td><td>Baixa</td><td>Alta</td><td>Média</td></tr>
+      </table>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">SQL nativo</strong> no Spring Data: <span class="ic">@Query</span> com <span class="ic">nativeQuery = true</span>. Você escreve o SQL do PostgreSQL, com <strong style="color:var(--text)">nomes de tabelas e colunas</strong>, e o Hibernate envia o texto como está. Útil para recursos que só o banco tem, como o <span class="ic">ILIKE</span> (LIKE sem diferenciar maiúsculas) do PostgreSQL:</p>
+      <div class="code-block"><span class="ann">@Query</span>(value = <span class="str">"SELECT * FROM tarefas WHERE titulo ILIKE CONCAT('%', :termo, '%')"</span>,
+       nativeQuery = <span class="kw">true</span>)
+<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscarPorTermoNativo</span>(<span class="ann">@Param</span>(<span class="str">"termo"</span>) <span class="typ">String</span> termo);</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">Como escolher no Task Manager:</strong></p>
+      <table>
+        <tr><th>Situação</th><th>Ferramenta</th></tr>
+        <tr><td class="left">Consulta fixa, conhecida em tempo de desenvolvimento (pendentes, por usuário, por etiqueta)</td><td><span class="ic">@Query</span> JPQL</td></tr>
+        <tr><td class="left">Tela de busca com filtros opcionais</td><td>Criteria API</td></tr>
+        <tr><td class="left">Recurso específico do PostgreSQL ou ajuste fino de desempenho</td><td>SQL nativo</td></tr>
+      </table>
+    </div>
+
+  </div><!-- /resumo1 -->
+
+  <!-- ═══ SIMULADOR ═══ -->
+  <div id="simulador1" class="section">
+
+    <!-- Part 1: Uma consulta, cinco jeitos -->
+    <div class="card">
+      <div class="card-title">&#x1F500; Uma Consulta, Cinco Jeitos <span class="pill pill-grad">JPQL &times; Criteria &times; Nativo</span></div>
+      <p style="margin-bottom:4px">Pergunta: <strong style="color:var(--text)">quais tarefas de prioridade ALTA ainda estão pendentes, por prazo?</strong> Escolha como escrever a consulta e compare o código, o SQL que aparece no console e a quantidade de idas ao banco:</p>
+      <div class="type-btns" id="jeitoOps">
+        <button class="type-btn active" onclick="runJeito('em',this)">JPQL + EntityManager</button>
+        <button class="type-btn" onclick="runJeito('query',this)">@Query JPQL</button>
+        <button class="type-btn" onclick="runJeito('criteria',this)">Criteria API</button>
+        <button class="type-btn" onclick="runJeito('nativo',this)">SQL nativo</button>
+        <button class="type-btn" onclick="runJeito('fetch',this)">@Query + JOIN FETCH</button>
+      </div>
+      <div class="code-block" id="jeitoCode" style="min-height:70px"></div>
+      <div class="output-label">Console</div>
+      <div class="output-block" id="jeitoOutput"></div>
+      <div class="warn-block" id="jeitoDesc"></div>
+    </div>
+
+    <!-- Part 2: Montando uma Criteria -->
+    <div class="card">
+      <div class="card-title">&#x1F9F1; Montando uma Criteria, Passo a Passo <span class="pill pill-blue">Stepper</span></div>
+      <p style="margin-bottom:4px">Acompanhe a chamada <span class="ic">buscaDinamica(null, LocalDate.of(2026, 11, 12), Prioridade.ALTA)</span> sendo montada. A cada passo, veja o código e a JPQL equivalente até ali:</p>
+      <div class="stepper">
+        <button class="step-btn active" onclick="setCritStep(0,this)">1. cb</button>
+        <button class="step-btn" onclick="setCritStep(1,this)">2. cq</button>
+        <button class="step-btn" onclick="setCritStep(2,this)">3. root</button>
+        <button class="step-btn" onclick="setCritStep(3,this)">4. predicados</button>
+        <button class="step-btn" onclick="setCritStep(4,this)">5. where</button>
+        <button class="step-btn" onclick="setCritStep(5,this)">6. executar</button>
+      </div>
+      <div class="code-block" id="critCode" style="min-height:70px"></div>
+      <div class="output-label">JPQL equivalente até aqui</div>
+      <div class="output-block" id="critJpql"></div>
+      <div class="warn-block" id="critDesc"></div>
+    </div>
+
+    <!-- Part 3: Construtor de busca -->
+    <div class="card">
+      <div class="card-title">&#x1F39B; Construtor de Busca: Filtros + Paginação <span class="pill pill-amber">Aula 06</span></div>
+      <p style="margin-bottom:8px">Preencha (ou deixe em branco) os filtros da tela de busca de tarefas. O simulador monta a lista de <span class="ic">Predicate</span>, o SQL e a página de resultados sobre as 7 tarefas da massa de dados:</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px;font-family:'JetBrains Mono',monospace;font-size:12px">
+        <label style="display:flex;flex-direction:column;gap:4px;color:var(--muted)">título contém
+          <input id="fTitulo" type="text" placeholder="(vazio)" oninput="buscaReset()" style="padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;background:var(--surface2);color:var(--text)"/>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;color:var(--muted)">prazo a partir de
+          <select id="fPrazo" onchange="buscaReset()" style="padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;background:var(--surface2);color:var(--text)">
+            <option value="">(null)</option>
+            <option value="2026-11-10">10/11/2026</option>
+            <option value="2026-11-12">12/11/2026</option>
+            <option value="2026-11-14">14/11/2026</option>
+          </select>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;color:var(--muted)">prioridade
+          <select id="fPrioridade" onchange="buscaReset()" style="padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;background:var(--surface2);color:var(--text)">
+            <option value="">(null)</option>
+            <option>ALTA</option>
+            <option>MEDIA</option>
+            <option>BAIXA</option>
+          </select>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;color:var(--muted)">ordenação
+          <select id="fOrdem" onchange="buscaReset()" style="padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;background:var(--surface2);color:var(--text)">
+            <option value="prazo">prazo ASC</option>
+            <option value="prazoDesc">prazo DESC</option>
+            <option value="titulo">titulo ASC</option>
+          </select>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;color:var(--muted)">tamanho da página
+          <select id="fTamanho" onchange="buscaReset()" style="padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;background:var(--surface2);color:var(--text)">
+            <option>2</option>
+            <option selected>3</option>
+            <option>5</option>
+          </select>
+        </label>
+      </div>
+      <div class="type-btns" style="align-items:center">
+        <button class="type-btn" onclick="buscaPagina(-1)">&#x25C0; anterior</button>
+        <span id="fPaginaInfo" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);padding:0 6px"></span>
+        <button class="type-btn" onclick="buscaPagina(1)">próxima &#x25B6;</button>
+      </div>
+      <div class="output-label">Chamada e predicados montados</div>
+      <div class="code-block" id="buscaCode" style="min-height:70px"></div>
+      <div class="output-label">Console</div>
+      <div class="output-block" id="buscaSql"></div>
+      <div class="output-label">Resultado (Page&lt;Tarefa&gt;)</div>
+      <div class="output-block" id="buscaResult"></div>
+      <div class="warn-block" id="buscaDesc"></div>
+    </div>
+
+  </div><!-- /simulador1 -->
+
+  <!-- ═══ EXERCÍCIOS ═══ -->
+  <div id="exercicios1" class="section">
+
+    <div class="score-bar-area">
+      <div>
+        <div class="score-val"><span id="scoreVal1">0</span>/5</div>
+        <div class="score-label">acertos</div>
+      </div>
+      <div style="flex:1">
+        <div class="score-track"><div class="score-fill" id="scoreBar1"></div></div>
+      </div>
+    </div>
+
+    <!-- Ex 1 -->
+    <div class="ex-block" id="ex1-0">
+      <div class="ex-q">Questão 1 &mdash; Como a JPQL opera sobre entidades e atributos, a consulta <code class="ic">SELECT t FROM tarefas t</code> (com o nome da tabela) gera erro: o correto é <code class="ic">FROM Tarefa t</code>.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(0,this,true)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(0,this,false)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-0"></div>
+    </div>
+
+    <!-- Ex 2 -->
+    <div class="ex-block" id="ex1-1">
+      <div class="ex-q">Questão 2 &mdash; Na Criteria API, o <code class="ic">Root&lt;Tarefa&gt;</code> representa a cláusula <strong>WHERE</strong> da consulta.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(1,this,false)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(1,this,true)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-1"></div>
+    </div>
+
+    <!-- Ex 3 -->
+    <div class="ex-block" id="ex1-2">
+      <div class="ex-q">Questão 3 &mdash; No método <code class="ic">buscarTarefasPaginado(pagina, tamanhoPagina)</code> do slide, buscar a página <strong>3</strong> com <strong>10</strong> tarefas por página chama <code class="ic">setFirstResult(20)</code>.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(2,this,true)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(2,this,false)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-2"></div>
+    </div>
+
+    <!-- Ex 4 -->
+    <div class="ex-block" id="ex1-3">
+      <div class="ex-q">Questão 4 &mdash; Em <code class="ic">SELECT t FROM Tarefa t ORDER BY t.prazo</code>, sem <code class="ic">ASC</code> nem <code class="ic">DESC</code>, as tarefas vêm do prazo mais distante para o mais próximo, porque o padrão é descendente.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(3,this,false)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(3,this,true)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-3"></div>
+    </div>
+
+    <!-- Ex 5 -->
+    <div class="ex-block" id="ex1-4">
+      <div class="ex-q">Questão 5 &mdash; Segundo o comparativo do slide, o SQL nativo tem <strong>baixa portabilidade</strong> e é indicado para usar recursos específicos do banco ou otimizar consultas.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(4,this,true)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(4,this,false)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-4"></div>
+    </div>
+
+  </div><!-- /exercicios1 -->
+
+  <!-- ═══ QUESTIONÁRIOS ═══ -->
+  <div id="questionarios1" class="section">
+    <div class="card">
+      <div class="card-title">&#x1F4DD; Questionários</div>
+      <p style="margin-bottom:1rem">Teste seu conhecimento com os questionários abaixo. Cada arquivo contém questões de verdadeiro ou falso e exercícios práticos de implementação.</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <a class="grad-btn" href="questionario-a03-01.html">&#x1F4CB; Quiz 01 &mdash; JPQL, Criteria API e Paginação</a>
+        <a class="grad-btn" href="questionario-a03-02.html" style="background:linear-gradient(270deg,#00c896 0%,#00a0cc 100%)">&#x1F4CB; Quiz 02 &mdash; JOIN FETCH, Filtros Dinâmicos e SQL Nativo</a>
+        <a class="grad-btn" href="questionario-a03-03.html" style="background:linear-gradient(270deg,#cba6f7 0%,#8d62ff 100%)">&#x1F6E0; Implementação &mdash; Consultas e Busca Paginada no Task Manager</a>
+      </div>
+    </div>
+  </div><!-- /questionarios1 -->
+
+  <!-- ═══ CURIOSIDADES ═══ -->
+  <div id="curiosidades1" class="section">
+    <div class="card">
+      <div class="card-title">&#x1F680; Curiosidades sobre JPQL, Criteria e Paginação</div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F9EC;</div>
+        <div>
+          <div class="curi-title">A JPQL tem um "avô": o EJB QL</div>
+          <div class="curi-body">A JPQL nasceu no <strong>JPA 1.0</strong> (2006, JSR 220) como evolução do <strong>EJB QL</strong>, a linguagem de consulta dos <em>entity beans</em> do EJB 2.0. Com o JPA, a mesma ideia de "consultar objetos, não tabelas" passou a valer para classes Java comuns anotadas com <code>@Entity</code>.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F3D7;</div>
+        <div>
+          <div class="curi-title">Criteria API: padrão desde o JPA 2.0</div>
+          <div class="curi-body">A Criteria API entrou na especificação no <strong>JPA 2.0</strong> (2009, JSR 317). Antes disso, o Hibernate já tinha a sua própria API de critérios (<code>org.hibernate.Criteria</code>), que foi depreciada no Hibernate 5.2 e <strong>removida no Hibernate 6</strong>. Hoje o caminho é a Criteria do Jakarta Persistence, a mesma do slide.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F9E0;</div>
+        <div>
+          <div class="curi-title">JPQL e Criteria viram a mesma coisa por dentro</div>
+          <div class="curi-body">No Hibernate 6, tanto a String JPQL/HQL quanto a Criteria são convertidas para uma mesma árvore interna, o <strong>SQM</strong> (<em>Semantic Query Model</em>), e só então traduzidas para o SQL do dialeto. Por isso as duas geram exatamente o mesmo SQL no simulador.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F4CF;</div>
+        <div>
+          <div class="curi-title">OFFSET ... FETCH FIRST é SQL padrão</div>
+          <div class="curi-body">O <code>LIMIT</code> que muita gente usa no PostgreSQL e no MySQL não faz parte do padrão SQL. A forma <code>OFFSET n ROWS FETCH FIRST m ROWS ONLY</code> foi padronizada no <strong>SQL:2008</strong>, e é ela que o Hibernate 6 gera para o PostgreSQL ao traduzir <code>setFirstResult</code> e <code>setMaxResults</code>.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F422;</div>
+        <div>
+          <div class="curi-title">Páginas muito distantes custam caro</div>
+          <div class="curi-body">A documentação do PostgreSQL avisa: as linhas puladas pelo <code>OFFSET</code> ainda precisam ser calculadas pelo servidor. Pedir a página 10.000 obriga o banco a percorrer e descartar todas as linhas anteriores. Para listas enormes, existe a paginação por chave (<em>keyset</em>): "me dê as próximas 10 depois do prazo X".</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F418;</div>
+        <div>
+          <div class="curi-title">ILIKE é coisa do PostgreSQL</div>
+          <div class="curi-body">O <code>ILIKE</code>, que compara texto sem diferenciar maiúsculas e minúsculas, <strong>não está no padrão SQL</strong>: é uma extensão do PostgreSQL. Esse é o tipo de recurso que justifica o SQL nativo e que explica a "portabilidade baixa" da tabela do slide: a mesma consulta falharia em outro banco.</div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /curiosidades1 -->
+
+  <!-- ═══ LINKS ═══ -->
+  <div id="links1" class="section">
+    <div class="card">
+      <div class="card-title">&#x1F517; Links Úteis</div>
+      <div style="display:flex;flex-direction:column;gap:14px;margin-top:4px">
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x23EA; Assunto Anterior</div>
+          <a class="link-item" href="../assunto02/index.html">Assunto 02 &mdash; Relacionamentos entre Entidades (OneToMany, ManyToOne, ManyToMany)</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x23E9; Próximo Assunto</div>
+          <a class="link-item" href="../index.html#assunto04">Assunto 04 &mdash; Fundamentos de Web Services e Operações CRUD com REST e Spring Boot (disponível em 17/11)</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F6E0; Task Manager API &mdash; Repositório da Turma</div>
+          <a class="link-item" href="https://github.com/irede-java-c2/taskmanager-api" target="_blank">https://github.com/irede-java-c2/taskmanager-api</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F3F7; Código das Aulas</div>
+          <span class="link-item" style="color:var(--muted)">aula-05 &mdash; Consultas JPQL no TarefaRepository (disponível após a aula)</span><br/>
+          <span class="link-item" style="color:var(--muted)">aula-06 &mdash; Busca com filtros dinâmicos e paginação (disponível após a aula)</span>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F680; Release do Marco 1 &middot; Persistência</div>
+          <span class="link-item" style="color:var(--muted)">v0.1.0 &mdash; fecha a Fase 1 (disponível após a aula 06)</span>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4DC; Jakarta Persistence 3.1 &mdash; Especificação (Query Language e Criteria API)</div>
+          <a class="link-item" href="https://jakarta.ee/specifications/persistence/3.1/" target="_blank">https://jakarta.ee/specifications/persistence/3.1/</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4D6; Hibernate ORM 6.6 &mdash; Guia da Linguagem de Consulta (HQL/JPQL)</div>
+          <a class="link-item" href="https://docs.jboss.org/hibernate/orm/6.6/querylanguage/html_single/Hibernate_Query_Language.html" target="_blank">https://docs.jboss.org/hibernate/orm/6.6/querylanguage/html_single/Hibernate_Query_Language.html</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4D6; Hibernate ORM 6.6 &mdash; User Guide (Criteria)</div>
+          <a class="link-item" href="https://docs.jboss.org/hibernate/orm/6.6/userguide/html_single/Hibernate_User_Guide.html#criteria" target="_blank">https://docs.jboss.org/hibernate/orm/6.6/userguide/html_single/Hibernate_User_Guide.html#criteria</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F343; Spring Data JPA &mdash; Query Methods e @Query</div>
+          <a class="link-item" href="https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html" target="_blank">https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F343; Spring Data JPA &mdash; Implementações Customizadas de Repositório</div>
+          <a class="link-item" href="https://docs.spring.io/spring-data/jpa/reference/repositories/custom-implementations.html" target="_blank">https://docs.spring.io/spring-data/jpa/reference/repositories/custom-implementations.html</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F418; PostgreSQL &mdash; LIMIT e OFFSET</div>
+          <a class="link-item" href="https://www.postgresql.org/docs/current/queries-limit.html" target="_blank">https://www.postgresql.org/docs/current/queries-limit.html</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F418; PostgreSQL &mdash; LIKE e ILIKE</div>
+          <a class="link-item" href="https://www.postgresql.org/docs/current/functions-matching.html" target="_blank">https://www.postgresql.org/docs/current/functions-matching.html</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F9EA; Baeldung &mdash; @Query no Spring Data JPA e Criteria Queries</div>
+          <a class="link-item" href="https://www.baeldung.com/spring-data-jpa-query" target="_blank">https://www.baeldung.com/spring-data-jpa-query</a><br/>
+          <a class="link-item" href="https://www.baeldung.com/hibernate-criteria-queries" target="_blank">https://www.baeldung.com/hibernate-criteria-queries</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">&#x1F468;&#x200D;&#x1F3EB; Instrutor das Aulas 05 e 06</div>
+          <a href="https://github.com/alex-girao" target="_blank" style="display:inline-flex;align-items:center;gap:12px;padding:10px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);text-decoration:none">
+            <img src="https://avatars.githubusercontent.com/u/3129090?v=4" alt="Alex Girão" width="44" height="44" style="border-radius:50%;border:2px solid rgba(141,98,255,.35)"/>
+            <span>
+              <span style="display:block;font-size:14px;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace">Alex Girão</span>
+              <span style="display:block;font-size:12px;color:var(--accent);font-family:'JetBrains Mono',monospace">github.com/alex-girao</span>
+            </span>
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </div><!-- /links1 -->
+
+  </div><!-- /aula01 -->
+
+</div><!-- /wrap -->
+
+<footer>
+  Capacita Brasil &mdash; <span>iRede</span> &mdash; Material Interativo de Java
+</footer>
+
+<script>
+function showTab(t, btn) {
+  document.querySelectorAll('#aula01 .section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('#aula01 .tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(t).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── Utilitários: SQL no formato do Hibernate (show-sql + format_sql) ── */
+function sql(cols, clauses) {
+  let s = 'Hibernate: \n    select\n' + cols.map((c, i) => '        ' + c + (i < cols.length - 1 ? ',' : ' ')).join('\n');
+  clauses.forEach(c => { s += '\n    ' + c[0] + '\n' + c.slice(1).join('\n'); });
+  return s;
+}
+const OUT = s => '<span style="color:#cdd6f4">' + s + '</span>';
+const OK  = s => '<span style="color:#a6e3a1">' + s + '</span>';
+const INF = s => '<span style="color:#89dceb">' + s + '</span>';
+const COLS_T  = ['t1_0.id', 't1_0.concluida', 't1_0.descricao', 't1_0.prazo', 't1_0.prioridade', 't1_0.titulo', 't1_0.usuario_id'];
+const COLS_TU = ['t1_0.id', 't1_0.concluida', 't1_0.descricao', 't1_0.prazo', 't1_0.prioridade', 't1_0.titulo', 'u1_0.id', 'u1_0.email', 'u1_0.nome', 'u1_0.senha'];
+const COLS_U  = ['u1_0.id', 'u1_0.email', 'u1_0.nome', 'u1_0.senha'];
+const SQL_USUARIO = sql(COLS_U, [['from', '        usuarios u1_0 '], ['where', '        u1_0.id=?']]);
+
+/* ── Simulador 1: Uma consulta, cinco jeitos ── */
+const SAIDA_ALTA = OUT('Escrever consultas JPQL → Ana Souza\nMontar busca com Criteria → Bruno Lima');
+const SQL_JPQL_ALTA = sql(COLS_T, [
+  ['from', '        tarefas t1_0 '],
+  ['where', '        t1_0.prioridade=? ', '        and t1_0.concluida=false '],
+  ['order by', '        t1_0.prazo']
+]);
+const IMPRIME = `.<span class="mtd">forEach</span>(t -&gt; <span class="typ">System</span>.out.<span class="mtd">println</span>(t.<span class="mtd">getTitulo</span>() + <span class="str">" → "</span> + t.<span class="mtd">getUsuario</span>().<span class="mtd">getNome</span>()));`;
+
+const JEITO_OPS = {
+  em: {
+    code: `<span class="typ">TypedQuery</span>&lt;<span class="cls">Tarefa</span>&gt; query = em.<span class="mtd">createQuery</span>(
+        <span class="str">"SELECT t FROM Tarefa t WHERE t.prioridade = :prioridade "</span> +
+        <span class="str">"AND t.concluida = false ORDER BY t.prazo"</span>, <span class="cls">Tarefa</span>.<span class="kw">class</span>);
+query.<span class="mtd">setParameter</span>(<span class="str">"prioridade"</span>, <span class="typ">Prioridade</span>.ALTA);
+<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; tarefas = query.<span class="mtd">getResultList</span>();
+tarefas${IMPRIME}`,
+    output: `${SQL_JPQL_ALTA}
+${SQL_USUARIO}
+${SQL_USUARIO}
+${SAIDA_ALTA}
+${INF('→ 3 SELECTs: 1 de tarefas + 1 por usuário (Tarefa.usuario é EAGER)')}`,
+    desc: '&#x1F539; É o código do slide 5: String JPQL, <strong>createQuery</strong> com o tipo (TypedQuery), <strong>setParameter</strong> e <strong>getResultList</strong>. O <span class="ic">em</span> vem de um <span class="ic">@PersistenceContext</span>. Repare que <span class="ic">:prioridade</span> virou <span class="ic">?</span> no SQL e que <span class="ic">false</span>, escrito direto na JPQL, aparece como literal.'
+  },
+  query: {
+    code: `<span class="cmt">// TarefaRepository</span>
+<span class="ann">@Query</span>(<span class="str">"SELECT t FROM Tarefa t WHERE t.prioridade = :prioridade AND t.concluida = false ORDER BY t.prazo"</span>)
+<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">listarPendentesPorPrioridade</span>(<span class="ann">@Param</span>(<span class="str">"prioridade"</span>) <span class="typ">Prioridade</span> prioridade);
+
+<span class="cmt">// uso no CommandLineRunner</span>
+tarefaRepository.<span class="mtd">listarPendentesPorPrioridade</span>(<span class="typ">Prioridade</span>.ALTA)
+        ${IMPRIME}`,
+    output: `${SQL_JPQL_ALTA}
+${SQL_USUARIO}
+${SQL_USUARIO}
+${SAIDA_ALTA}
+${INF('→ 3 SELECTs: o mesmo SQL do EntityManager')}`,
+    desc: '&#x1F539; Mesma JPQL, mesmo SQL: o Spring Data cria a TypedQuery, chama setParameter com o valor do <span class="ic">@Param</span> e devolve o getResultList(). Vantagem extra: o Spring valida a JPQL quando a aplicação sobe. Um erro de digitação em <span class="ic">Tarefa</span> ou <span class="ic">prioridade</span> derruba a inicialização em vez de estourar só quando o método for chamado.'
+  },
+  criteria: {
+    code: `<span class="typ">CriteriaBuilder</span> cb = em.<span class="mtd">getCriteriaBuilder</span>();
+<span class="typ">CriteriaQuery</span>&lt;<span class="cls">Tarefa</span>&gt; cq = cb.<span class="mtd">createQuery</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>);
+<span class="typ">Root</span>&lt;<span class="cls">Tarefa</span>&gt; root = cq.<span class="mtd">from</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>);
+
+cq.<span class="mtd">select</span>(root)
+  .<span class="mtd">where</span>(cb.<span class="mtd">equal</span>(root.<span class="mtd">get</span>(<span class="str">"prioridade"</span>), <span class="typ">Prioridade</span>.ALTA),
+         cb.<span class="mtd">equal</span>(root.<span class="mtd">get</span>(<span class="str">"concluida"</span>), <span class="kw">false</span>))
+  .<span class="mtd">orderBy</span>(cb.<span class="mtd">asc</span>(root.<span class="mtd">get</span>(<span class="str">"prazo"</span>)));
+
+em.<span class="mtd">createQuery</span>(cq).<span class="mtd">getResultList</span>()
+        ${IMPRIME}`,
+    output: `${sql(COLS_T, [
+  ['from', '        tarefas t1_0 '],
+  ['where', '        t1_0.prioridade=? ', '        and t1_0.concluida=? '],
+  ['order by', '        t1_0.prazo']
+])}
+${SQL_USUARIO}
+${SQL_USUARIO}
+${SAIDA_ALTA}
+${INF('→ 3 SELECTs: mesmo SQL, montado com objetos')}`,
+    desc: '&#x1F539; Mesmo resultado, sem nenhuma String de consulta. O <span class="ic">where</span> com dois predicados os combina com AND. A única diferença no SQL: o <span class="ic">false</span> passado ao <span class="ic">cb.equal</span> é enviado como parâmetro (<span class="ic">?</span>). Mais verboso que a JPQL, como diz a tabela do slide 12, mas pronto para virar busca dinâmica.'
+  },
+  nativo: {
+    code: `<span class="cmt">// TarefaRepository</span>
+<span class="ann">@Query</span>(value = <span class="str">"SELECT * FROM tarefas WHERE prioridade = :prioridade AND concluida = false ORDER BY prazo"</span>,
+       nativeQuery = <span class="kw">true</span>)
+<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">listarPendentesNativo</span>(<span class="ann">@Param</span>(<span class="str">"prioridade"</span>) <span class="typ">String</span> prioridade);
+
+<span class="cmt">// uso</span>
+tarefaRepository.<span class="mtd">listarPendentesNativo</span>(<span class="str">"ALTA"</span>)
+        ${IMPRIME}`,
+    output: `Hibernate:
+    SELECT
+        *
+    FROM
+        tarefas
+    WHERE
+        prioridade = ?
+        AND concluida = false
+    ORDER BY
+        prazo
+${SQL_USUARIO}
+${SQL_USUARIO}
+${SAIDA_ALTA}
+${INF('→ 3 SELECTs: o SQL foi enviado exatamente como escrito')}`,
+    desc: '&#x1F539; Aqui você fala a língua do banco: tabela <span class="ic">tarefas</span>, colunas <span class="ic">prioridade</span> e <span class="ic">prazo</span>. O Hibernate não traduz nada, só envia o texto e converte as linhas em objetos Tarefa. Por isso o parâmetro é a String <span class="ic">"ALTA"</span>, o valor gravado na coluna. Se a tabela mudar de nome, a consulta quebra: abstração nenhuma e portabilidade baixa.'
+  },
+  fetch: {
+    code: `<span class="cmt">// TarefaRepository</span>
+<span class="ann">@Query</span>(<span class="str">"SELECT t FROM Tarefa t JOIN FETCH t.usuario "</span> +
+       <span class="str">"WHERE t.prioridade = :prioridade AND t.concluida = false ORDER BY t.prazo"</span>)
+<span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">listarPendentesComUsuario</span>(<span class="ann">@Param</span>(<span class="str">"prioridade"</span>) <span class="typ">Prioridade</span> prioridade);
+
+<span class="cmt">// uso</span>
+tarefaRepository.<span class="mtd">listarPendentesComUsuario</span>(<span class="typ">Prioridade</span>.ALTA)
+        ${IMPRIME}`,
+    output: `${sql(COLS_TU, [
+  ['from', '        tarefas t1_0 '],
+  ['join', '        usuarios u1_0 ', '            on u1_0.id=t1_0.usuario_id '],
+  ['where', '        t1_0.prioridade=? ', '        and t1_0.concluida=false '],
+  ['order by', '        t1_0.prazo']
+])}
+${SAIDA_ALTA}
+${OK('✓ 1 SELECT: tarefas e usuários na mesma ida ao banco')}`,
+    desc: '&#x1F539; O <span class="ic">JOIN FETCH</span> manda o Hibernate trazer o usuário <strong>na mesma consulta</strong>: as colunas de <span class="ic">usuarios</span> entram no SELECT e somem os SELECTs extras. Com 2 usuários a economia é pequena; com 500 tarefas de 200 usuários, são 201 consultas contra 1. É a cura do N+1 prometida na aula 04.'
+  }
+};
+
+function runJeito(op, btn) {
+  document.querySelectorAll('#jeitoOps .type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const data = JEITO_OPS[op];
+  document.getElementById('jeitoCode').innerHTML = data.code;
+  document.getElementById('jeitoOutput').innerHTML = data.output;
+  document.getElementById('jeitoDesc').innerHTML = data.desc;
+}
+
+/* ── Simulador 2: Montando uma Criteria ── */
+const CRIT_STEPS = [
+  {
+    code: `<span class="typ">CriteriaBuilder</span> cb = em.<span class="mtd">getCriteriaBuilder</span>();`,
+    jpql: OUT('(nada ainda: o CriteriaBuilder é só a fábrica de peças)'),
+    desc: '&#x1F539; <strong>CriteriaBuilder</strong>: obtido do EntityManager, é ele que cria a CriteriaQuery e todas as partes da consulta (predicados, ordenações, funções). Ele não guarda nenhuma consulta.'
+  },
+  {
+    code: `<span class="typ">CriteriaQuery</span>&lt;<span class="cls">Tarefa</span>&gt; cq = cb.<span class="mtd">createQuery</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>);`,
+    jpql: OUT('SELECT ...            -- vai devolver objetos Tarefa\nFROM   ...            -- ainda vazio'),
+    desc: '&#x1F539; <strong>CriteriaQuery&lt;Tarefa&gt;</strong>: a consulta em si, ainda vazia, que será "montada" com SELECT, FROM e WHERE. O <span class="ic">&lt;Tarefa&gt;</span> define o tipo de retorno: o getResultList() vai devolver List&lt;Tarefa&gt;.'
+  },
+  {
+    code: `<span class="typ">Root</span>&lt;<span class="cls">Tarefa</span>&gt; root = cq.<span class="mtd">from</span>(<span class="cls">Tarefa</span>.<span class="kw">class</span>);`,
+    jpql: OUT('SELECT t\nFROM Tarefa t'),
+    desc: '&#x1F539; <strong>Root&lt;Tarefa&gt;</strong>: representa a entidade do FROM, o equivalente ao alias <span class="ic">t</span>. É a partir dele que você chega aos atributos: <span class="ic">root.get("prazo")</span> = <span class="ic">t.prazo</span>. No slide 11 não há <span class="ic">cq.select(root)</span>: com um único Root, ele já é o SELECT.'
+  },
+  {
+    code: `<span class="typ">List</span>&lt;<span class="typ">Predicate</span>&gt; predicates = <span class="kw">new</span> <span class="typ">ArrayList</span>&lt;&gt;();
+<span class="kw">if</span> (titulo != <span class="kw">null</span> &amp;&amp; !titulo.<span class="mtd">trim</span>().<span class="mtd">isEmpty</span>()) { ... }   <span class="cmt">// titulo == null → pulado</span>
+<span class="kw">if</span> (prazoMin != <span class="kw">null</span>) {
+    predicates.<span class="mtd">add</span>(cb.<span class="mtd">greaterThanOrEqualTo</span>(root.<span class="mtd">get</span>(<span class="str">"prazo"</span>), prazoMin));
+}
+<span class="kw">if</span> (prioridade != <span class="kw">null</span>) {
+    predicates.<span class="mtd">add</span>(cb.<span class="mtd">equal</span>(root.<span class="mtd">get</span>(<span class="str">"prioridade"</span>), prioridade));
+}`,
+    jpql: OUT('SELECT t\nFROM Tarefa t\n') + '<span style="color:#6c7086">-- predicados prontos, mas ainda fora da consulta:\n--   [0] t.prazo &gt;= :prazoMin\n--   [1] t.prioridade = :prioridade</span>',
+    desc: '&#x1F539; <strong>Predicate</strong>: cada condição é um objeto criado pelo <span class="ic">cb</span>. Como o título veio <span class="ic">null</span>, o primeiro <span class="ic">if</span> não adiciona nada. A lista ficou com 2 predicados. Ainda não há WHERE: os predicados só existem na lista.'
+  },
+  {
+    code: `<span class="cmt">// Combina todos os predicados da lista com "AND"</span>
+cq.<span class="mtd">where</span>(predicates.<span class="mtd">toArray</span>(<span class="kw">new</span> <span class="typ">Predicate</span>[<span class="num">0</span>]));`,
+    jpql: OUT('SELECT t\nFROM Tarefa t\nWHERE t.prazo &gt;= :prazoMin\n  AND t.prioridade = :prioridade'),
+    desc: '&#x1F539; <strong>cq.where(...)</strong> recebe um array de predicados e os combina com AND. Se a lista estivesse vazia, a consulta continuaria sem WHERE e devolveria todas as tarefas. É assim que o mesmo método atende qualquer combinação de filtros.'
+  },
+  {
+    code: `<span class="kw">return</span> em.<span class="mtd">createQuery</span>(cq).<span class="mtd">getResultList</span>();`,
+    jpql: sql(COLS_T, [
+      ['from', '        tarefas t1_0 '],
+      ['where', '        t1_0.prazo&gt;=? ', '        and t1_0.prioridade=?']
+    ]) + '\n' + SQL_USUARIO + '\n' + OUT('[Tarefa{id=5, titulo=Montar busca com Criteria, ... prioridade=ALTA}]'),
+    desc: '&#x1F539; <strong>em.createQuery(cq)</strong> transforma a CriteriaQuery em uma <span class="ic">TypedQuery&lt;Tarefa&gt;</span>, exatamente como na JPQL. A partir daqui é tudo igual: setFirstResult, setMaxResults, getResultList. Só a tarefa 5 tem prazo a partir de 12/11 e prioridade ALTA.'
+  }
+];
+
+function setCritStep(i, btn) {
+  document.querySelectorAll('#simulador1 .stepper .step-btn').forEach((b, idx) => {
+    b.classList.remove('active');
+    if (idx < i) b.classList.add('past'); else b.classList.remove('past');
+  });
+  btn.classList.add('active');
+  let code = '';
+  for (let k = 0; k < i; k++) code += '<span style="opacity:.45">' + CRIT_STEPS[k].code + '</span>\n';
+  code += CRIT_STEPS[i].code + '   <span class="cmt">// ◀ novo</span>';
+  document.getElementById('critCode').innerHTML = code;
+  document.getElementById('critJpql').innerHTML = CRIT_STEPS[i].jpql;
+  document.getElementById('critDesc').innerHTML = CRIT_STEPS[i].desc;
+}
+
+/* ── Simulador 3: Construtor de busca ── */
+const TAREFAS = [
+  { id: 1, titulo: 'Estudar JPA',               prioridade: 'ALTA',  concluida: true,  prazo: '2026-11-05', usuario: 1 },
+  { id: 2, titulo: 'Configurar PostgreSQL',     prioridade: 'MEDIA', concluida: true,  prazo: '2026-11-03', usuario: 2 },
+  { id: 3, titulo: 'Escrever consultas JPQL',   prioridade: 'ALTA',  concluida: false, prazo: '2026-11-10', usuario: 1 },
+  { id: 4, titulo: 'Revisar JOIN FETCH',        prioridade: 'MEDIA', concluida: false, prazo: '2026-11-12', usuario: 1 },
+  { id: 5, titulo: 'Montar busca com Criteria', prioridade: 'ALTA',  concluida: false, prazo: '2026-11-12', usuario: 2 },
+  { id: 6, titulo: 'Testar paginação',          prioridade: 'BAIXA', concluida: false, prazo: '2026-11-14', usuario: 2 },
+  { id: 7, titulo: 'Fazer backup do banco',     prioridade: 'BAIXA', concluida: false, prazo: '2026-11-20', usuario: 1 }
+];
+const USUARIOS = { 1: 'Ana Souza', 2: 'Bruno Lima' };
+let buscaPag = 0;
+
+function esc(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function pad(s, n) { s = String(s); return s.length >= n ? s : s + ' '.repeat(n - s.length); }
+
+function buscaReset() { buscaPag = 0; renderBusca(); }
+function buscaPagina(d) { buscaPag += d; renderBusca(); }
+
+function renderBusca() {
+  const titulo = document.getElementById('fTitulo').value;
+  const prazo = document.getElementById('fPrazo').value;
+  const prio = document.getElementById('fPrioridade').value;
+  const ordem = document.getElementById('fOrdem').value;
+  const tam = parseInt(document.getElementById('fTamanho').value, 10);
+  const temTitulo = titulo.trim() !== '';
+
+  // filtros (LIKE do PostgreSQL diferencia maiúsculas)
+  let lista = TAREFAS.filter(t =>
+    (!temTitulo || t.titulo.includes(titulo)) &&
+    (!prazo || t.prazo >= prazo) &&
+    (!prio || t.prioridade === prio));
+  if (ordem === 'prazo') lista.sort((a, b) => a.prazo.localeCompare(b.prazo) || a.id - b.id);
+  if (ordem === 'prazoDesc') lista.sort((a, b) => b.prazo.localeCompare(a.prazo) || a.id - b.id);
+  if (ordem === 'titulo') lista.sort((a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR'));
+
+  const total = lista.length;
+  const totalPaginas = Math.ceil(total / tam);
+  if (buscaPag > totalPaginas - 1) buscaPag = Math.max(totalPaginas - 1, 0);
+  if (buscaPag < 0) buscaPag = 0;
+  const offset = buscaPag * tam;
+  const pagina = lista.slice(offset, offset + tam);
+
+  // código: chamada + predicados
+  const jTitulo = temTitulo ? '<span class="str">"' + esc(titulo) + '"</span>' : '<span class="kw">null</span>';
+  const jPrazo = prazo ? '<span class="typ">LocalDate</span>.<span class="mtd">of</span>(<span class="num">2026</span>, <span class="num">11</span>, <span class="num">' + parseInt(prazo.slice(8), 10) + '</span>)' : '<span class="kw">null</span>';
+  const jPrio = prio ? '<span class="typ">Prioridade</span>.' + prio : '<span class="kw">null</span>';
+  const jSort = ordem === 'prazo' ? '<span class="typ">Sort</span>.<span class="mtd">by</span>(<span class="str">"prazo"</span>)'
+              : ordem === 'prazoDesc' ? '<span class="typ">Sort</span>.<span class="mtd">by</span>(<span class="str">"prazo"</span>).<span class="mtd">descending</span>()'
+              : '<span class="typ">Sort</span>.<span class="mtd">by</span>(<span class="str">"titulo"</span>)';
+  let code = `<span class="typ">Page</span>&lt;<span class="cls">Tarefa</span>&gt; pagina = tarefaRepository.<span class="mtd">buscaDinamica</span>(${jTitulo}, ${jPrazo}, ${jPrio},
+        <span class="typ">PageRequest</span>.<span class="mtd">of</span>(<span class="num">${buscaPag}</span>, <span class="num">${tam}</span>, ${jSort}));
+
+<span class="cmt">// dentro de buscaDinamica: List&lt;Predicate&gt; predicates</span>
+`;
+  const where = [];
+  let n = 0;
+  if (temTitulo) { code += `predicates.<span class="mtd">add</span>(cb.<span class="mtd">like</span>(root.<span class="mtd">get</span>(<span class="str">"titulo"</span>), <span class="str">"%${esc(titulo)}%"</span>));  <span class="cmt">// [${n++}]</span>\n`; where.push('t1_0.titulo like ?'); }
+  else code += `<span class="cmt">// titulo vazio    → nenhum predicado</span>\n`;
+  if (prazo) { code += `predicates.<span class="mtd">add</span>(cb.<span class="mtd">greaterThanOrEqualTo</span>(root.<span class="mtd">get</span>(<span class="str">"prazo"</span>), prazoMin));  <span class="cmt">// [${n++}]</span>\n`; where.push('t1_0.prazo&gt;=?'); }
+  else code += `<span class="cmt">// prazoMin null   → nenhum predicado</span>\n`;
+  if (prio) { code += `predicates.<span class="mtd">add</span>(cb.<span class="mtd">equal</span>(root.<span class="mtd">get</span>(<span class="str">"prioridade"</span>), prioridade));  <span class="cmt">// [${n++}]</span>\n`; where.push('t1_0.prioridade=?'); }
+  else code += `<span class="cmt">// prioridade null → nenhum predicado</span>\n`;
+  code += `cq.<span class="mtd">where</span>(predicates.<span class="mtd">toArray</span>(<span class="kw">new</span> <span class="typ">Predicate</span>[<span class="num">0</span>]));  <span class="cmt">// ${n} predicado(s)</span>`;
+  document.getElementById('buscaCode').innerHTML = code;
+
+  // SQL
+  const whereClause = where.length ? [['where'].concat(where.map((w, i) => '        ' + (i ? 'and ' : '') + w + ' '))] : [];
+  const ordemSql = ordem === 'prazo' ? 't1_0.prazo' : ordem === 'prazoDesc' ? 't1_0.prazo desc' : 't1_0.titulo';
+  const pagClauses = offset > 0
+    ? [['offset', '        ? rows '], ['fetch', '        first ? rows only']]
+    : [['fetch', '        first ? rows only']];
+  let out = sql(COLS_T, [['from', '        tarefas t1_0 ']].concat(whereClause, [['order by', '        ' + ordemSql + ' ']], pagClauses));
+  const usuariosPagina = [...new Set(pagina.map(t => t.usuario))];
+  usuariosPagina.forEach(() => { out += '\n' + SQL_USUARIO; });
+  out += '\n' + sql(['count(t1_0.id) '], [['from', '        tarefas t1_0 ']].concat(where.length ? [['where'].concat(where.map((w, i) => '        ' + (i ? 'and ' : '') + w + ' '))] : []));
+  out += '\n' + INF('→ ' + (2 + usuariosPagina.length) + ' SELECTs: página + ' + usuariosPagina.length + ' usuário(s) (EAGER) + count');
+  document.getElementById('buscaSql').innerHTML = out;
+
+  // resultado
+  const tipo = pagina.length ? 'br.org.irede.taskmanagerapi.model.Tarefa' : 'UNKNOWN';
+  let res = OUT('Page ' + (buscaPag + 1) + ' of ' + totalPaginas + ' containing ' + tipo + ' instances') + '\n\n';
+  if (pagina.length) {
+    res += ' id | ' + pad('titulo', 25) + ' | prioridade |   prazo    | usuario\n';
+    res += '----+-' + '-'.repeat(25) + '-+------------+------------+-----------\n';
+    pagina.forEach(t => {
+      res += pad(' ' + t.id, 3) + ' | ' + pad(t.titulo, 25) + ' | ' + pad(t.prioridade, 10) + ' | ' + t.prazo + ' | ' + USUARIOS[t.usuario] + '\n';
+    });
+  } else {
+    res += '<span style="color:#fab387">(nenhuma tarefa)</span>\n';
+  }
+  res += '\n' + INF('getTotalElements() = ' + total + '   getTotalPages() = ' + totalPaginas + '   hasNext() = ' + (buscaPag < totalPaginas - 1));
+  document.getElementById('buscaResult').innerHTML = res;
+  document.getElementById('fPaginaInfo').textContent = 'página ' + (totalPaginas ? buscaPag + 1 : 0) + ' de ' + totalPaginas + ' · PageRequest.of(' + buscaPag + ', ' + tam + ')';
+
+  // explicação
+  let desc = '&#x1F539; ' + n + ' filtro(s) preenchido(s) &rarr; ' + n + ' predicado(s)' + (n > 1 ? ' combinados com AND' : '') + (n === 0 ? ': consulta sem WHERE, todas as tarefas entram na contagem' : '') + '. ';
+  desc += 'OFFSET = página &times; tamanho = ' + buscaPag + ' &times; ' + tam + ' = ' + offset + (offset === 0 ? ' (o Hibernate nem escreve o offset)' : '') + '. ';
+  desc += 'O <span class="ic">count</span> usa os <strong>mesmos predicados</strong>, sem ORDER BY e sem paginação, para o Page saber o total.';
+  if (temTitulo && total === 0) {
+    const semCaixa = TAREFAS.some(t => t.titulo.toLowerCase().includes(titulo.toLowerCase()));
+    if (semCaixa) desc += '<br/>&#x26A0; Existe tarefa com esse texto em outra caixa (maiúsculas/minúsculas), mas o LIKE do PostgreSQL diferencia. Use <span class="ic">cb.lower(...)</span> para ignorar a caixa.';
+  }
+  document.getElementById('buscaDesc').innerHTML = desc;
+}
+
+function answer1(i, btn, isCorrect) {
+  const block = document.getElementById('ex1-' + i);
+  const fb = document.getElementById('fb1-' + i);
+  block.querySelectorAll('.choice').forEach(b => b.disabled = true);
+  if (isCorrect) {
+    btn.classList.add('correct');
+    block.classList.add('done');
+    fb.className = 'feedback show ok';
+    fb.textContent = '✓ Correto!';
+    window.score1 = (window.score1 || 0) + 1;
+  } else {
+    btn.classList.add('wrong');
+    fb.className = 'feedback show ko';
+    fb.textContent = '✗ Incorreto. Revise o resumo desta aula.';
+  }
+  document.getElementById('scoreVal1').textContent = window.score1 || 0;
+  document.getElementById('scoreBar1').style.width = ((window.score1 || 0) / 5 * 100) + '%';
+}
+</script>
+
+<script>
+window.addEventListener('DOMContentLoaded', function () {
+  runJeito('em', document.querySelector('#jeitoOps .type-btn.active'));
+  setCritStep(0, document.querySelector('#simulador1 .stepper .step-btn.active'));
+  renderBusca();
+});
+</script>
+</body>
+</html>
