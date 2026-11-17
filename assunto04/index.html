@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Java &mdash; Assunto 04 &mdash; Web Services e CRUD com REST e Spring Boot</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:          #f0f0f5;
+  --surface:     #ffffff;
+  --border:      #d8d5e8;
+  --accent:      #8d62ff;
+  --accent2:     #00c896;
+  --text:        #1a1730;
+  --muted:       #7a748f;
+  --green:       #155e35;
+  --green-bg:    #d6f5e5;
+  --green-border:#6edaa8;
+  --red:         #7a1f1f;
+  --red-bg:      #fde8e8;
+  --red-border:  #f0a0a0;
+  --radius:      10px;
+  --glow:        0 0 18px rgba(141,98,255,0.15);
+  --grad:        linear-gradient(270deg, #8d62ff 53.6%, #00ffbc 98.32%);
+  --surface2:    #f7f5ff;
+  --mint:        #00c896;
+  --danger:      #d63030;
+  --warn:        #d48a00;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+  padding: 0 0 60px;
+  background-image:
+    radial-gradient(ellipse 70% 40% at 50% -10%, rgba(141,98,255,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 30% at 80% 110%, rgba(0,200,150,0.06) 0%, transparent 70%);
+}
+header {
+  text-align: center;
+  padding: 36px 20px 28px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  background: var(--surface);
+  box-shadow: 0 2px 16px rgba(141,98,255,0.07);
+}
+header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 2px;
+  background: linear-gradient(90deg, transparent, #8d62ff, transparent);
+}
+.header-logo { height: 48px; margin-bottom: 14px; display: block; margin-left: auto; margin-right: auto; }
+.logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  background: var(--grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.logo span { opacity: 0.6; }
+.subtitle { color: var(--muted); font-size: .85rem; margin-top: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+.header-badge {
+  display: inline-block; margin-top: 12px; padding: 4px 16px; border-radius: 99px;
+  font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace;
+  background: linear-gradient(270deg, rgba(141,98,255,.15), rgba(0,255,188,.1));
+  border: 1px solid rgba(141,98,255,.3); color: var(--accent); letter-spacing: .06em;
+}
+.wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+/* ── AULA TABS ── */
+.aula-bar {
+  display: flex; gap: 4px; margin-bottom: 1.5rem;
+  background: var(--text); border-radius: 14px; padding: 6px;
+  box-shadow: 0 4px 20px rgba(26,23,48,0.18);
+}
+.aula-tab {
+  flex: 1; padding: 12px 20px; border-radius: 10px; border: none;
+  background: transparent; color: rgba(255,255,255,0.45); cursor: pointer;
+  font-size: 14px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+  transition: all .2s; letter-spacing: .02em;
+}
+.aula-tab.active { background: var(--grad); color: #fff; box-shadow: 0 2px 14px rgba(141,98,255,.45); }
+.aula-section { display: none; }
+.aula-section.active { display: block; }
+
+/* ── INNER TABS ── */
+.tab-bar {
+  display: flex; gap: 6px; margin-bottom: 1.5rem; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 14px; padding: 6px;
+  flex-wrap: wrap; box-shadow: 0 2px 10px rgba(141,98,255,0.06);
+}
+.tab {
+  flex: 1; min-width: 120px; padding: 9px 16px; border-radius: var(--radius);
+  border: none; background: transparent; color: var(--muted); cursor: pointer;
+  font-size: 13px; font-weight: 500; font-family: 'Space Grotesk', sans-serif; transition: all .2s;
+}
+.tab:hover:not(.active) { background: rgba(141,98,255,.08); color: var(--text); }
+.tab.active { background: var(--grad); color: #fff; font-weight: 700; box-shadow: 0 2px 12px rgba(141,98,255,.3); }
+.section { display: none; }
+.section.active { display: block; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.5rem; margin-bottom: 1.25rem; position: relative; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(141,98,255,.35), transparent);
+}
+.card-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700;
+  margin-bottom: 1rem; display: flex; align-items: center; gap: 10px; color: var(--text); flex-wrap: wrap;
+}
+.card p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+/* ── PILLS ── */
+.pill { display: inline-block; padding: 3px 11px; border-radius: 99px; font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.pill-grad  { background: rgba(141,98,255,.12); border: 1px solid rgba(141,98,255,.3);  color: var(--accent); }
+.pill-green { background: rgba(0,200,150,.12);  border: 1px solid rgba(0,200,150,.3);   color: #0a7a5a; }
+.pill-red   { background: rgba(214,48,48,.1);   border: 1px solid rgba(214,48,48,.25);  color: var(--danger); }
+.pill-amber { background: rgba(212,138,0,.1);   border: 1px solid rgba(212,138,0,.25);  color: var(--warn); }
+.pill-blue  { background: rgba(141,98,255,.12); border: 1px solid rgba(141,98,255,.25); color: #5a30cc; }
+.pill-java  { background: rgba(248,152,32,.12); border: 1px solid rgba(248,152,32,.35); color: #9a5000; }
+
+/* ── TABLE ── */
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+th {
+  background: rgba(141,98,255,.1); padding: 10px 14px; text-align: center;
+  font-weight: 700; font-size: 12px; color: var(--accent);
+  font-family: 'JetBrains Mono', monospace; letter-spacing: .05em; border-bottom: 1px solid var(--border);
+}
+td { padding: 10px 14px; text-align: center; border-bottom: 1px solid rgba(141,98,255,.08); font-size: 13px; font-family: 'JetBrains Mono', monospace; }
+td.left { text-align: left; font-family: 'Space Grotesk', sans-serif; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(141,98,255,.04); }
+
+/* ── CODE BLOCK ── */
+.code-block {
+  background: #1e1e2e; border: 1px solid #3a3a5c; border-radius: 10px;
+  padding: 16px 18px; margin: 12px 0; font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; line-height: 1.8; color: #cdd6f4; overflow-x: auto; white-space: pre;
+}
+.code-block .kw  { color: #cba6f7; }
+.code-block .typ { color: #89b4fa; }
+.code-block .str { color: #a6e3a1; }
+.code-block .num { color: #fab387; }
+.code-block .cmt { color: #6c7086; font-style: italic; }
+.code-block .cls { color: #f5c2e7; }
+.code-block .mtd { color: #89dceb; }
+.code-block .ann { color: #f9e2af; }
+
+/* ── SCORE BAR ── */
+.score-bar-area {
+  display: flex; align-items: center; gap: 16px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 18px; margin-bottom: 1.25rem; box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.score-val {
+  font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+  background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.score-label { font-size: 11px; color: var(--muted); }
+.score-track { flex: 1; background: #e5e2f0; border-radius: 99px; height: 8px; overflow: hidden; }
+.score-fill { height: 100%; border-radius: 99px; background: var(--grad); width: 0%; transition: width .4s cubic-bezier(.4,0,.2,1); }
+
+/* ── EXERCISES ── */
+.ex-block {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.25rem; margin-bottom: 1rem; border-left: 3px solid var(--accent);
+  transition: border-left-color .2s; box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.ex-block.done { border-left-color: var(--accent2); }
+.ex-q { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text); line-height: 1.55; }
+.ex-scenario { font-size: 13px; color: var(--muted); margin-bottom: 14px; line-height: 1.55; }
+.choices { display: flex; gap: 8px; flex-wrap: wrap; }
+.choice {
+  padding: 9px 20px; border-radius: 7px; border: 1.5px solid var(--border);
+  background: transparent; color: var(--text); cursor: pointer;
+  font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 600; transition: all .15s;
+}
+.choice:hover:not(:disabled) { background: rgba(141,98,255,.08); border-color: var(--accent); }
+.choice:disabled { cursor: default; }
+.choice.correct { background: var(--green-bg); color: #0a7a5a; border-color: var(--green-border); }
+.choice.wrong   { background: var(--red-bg);   color: var(--danger); border-color: var(--red-border); }
+.feedback { font-size: 13px; margin-top: 12px; padding: 10px 14px; border-radius: var(--radius); display: none; line-height: 1.6; }
+.feedback.show { display: block; }
+.feedback.ok { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.feedback.ko { background: var(--red-bg);   color: var(--red);   border: 1px solid var(--red-border); }
+
+/* ── CURIOSIDADES ── */
+.curi-item { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid rgba(141,98,255,.1); }
+.curi-item:last-of-type { border-bottom: none; }
+.curi-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+  background: linear-gradient(270deg, rgba(141,98,255,.15), rgba(0,200,150,.1));
+  border: 1px solid rgba(141,98,255,.25);
+}
+.curi-title { font-size: 14px; font-weight: 700; font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; color: var(--text); }
+.curi-body { font-size: 13px; color: var(--muted); line-height: 1.65; }
+.curi-body code { background: rgba(141,98,255,.12); color: #5a30cc; padding: 1px 6px; border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+
+/* ── LINKS ── */
+.link-item {
+  color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  text-decoration: none; word-break: break-all; transition: color .15s;
+}
+.link-item:hover { color: var(--mint); text-decoration: underline; }
+
+/* ── GRAD BTN ── */
+.grad-btn {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 14px;
+  padding: 10px 22px; border-radius: 8px; background: var(--grad); color: #fff;
+  border: none; cursor: pointer; font-size: 13px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace; text-decoration: none;
+  transition: opacity .2s, transform .15s; box-shadow: 0 3px 14px rgba(141,98,255,.3);
+}
+.grad-btn:hover { opacity: .88; transform: translateY(-1px); }
+
+/* ── INLINE CODE ── */
+.ic { background: rgba(141,98,255,.12); color: #5a30cc; padding: 1px 7px; border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+
+/* ── TIMELINE ── */
+.timeline-item { display: grid; grid-template-columns: 160px 1fr; gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(141,98,255,.1); }
+.timeline-item:last-child { border-bottom: none; }
+.timeline-era { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--accent); line-height: 1.5; }
+.timeline-body { font-size: 13px; color: var(--muted); line-height: 1.65; }
+.timeline-body strong { color: var(--text); }
+
+/* ── TYPE PICKER (SIMULADOR) ── */
+.type-btns { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 14px; }
+.type-btn {
+  padding: 8px 16px; border-radius: 99px; border: 1.5px solid var(--border);
+  background: transparent; font-size: 12px; font-weight: 700; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace; color: var(--muted); transition: all .15s;
+}
+.type-btn:hover { border-color: var(--accent); color: var(--text); }
+.type-btn.active { background: var(--grad); color: #fff; border-color: transparent; box-shadow: 0 2px 10px rgba(141,98,255,.3); }
+
+.output-block {
+  background: #12121e; border: 1px solid #2a2a40; border-radius: 8px;
+  padding: 14px 18px; margin-top: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.8;
+  color: #a6e3a1; overflow-x: auto; white-space: pre;
+}
+.output-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  color: var(--muted); letter-spacing: .07em; text-transform: uppercase;
+  margin: 12px 0 4px;
+}
+.warn-block {
+  background: rgba(212,138,0,.08); border: 1px solid rgba(212,138,0,.25); border-radius: 8px;
+  padding: 10px 14px; margin-top: 10px; font-size: 12px; color: var(--warn); line-height: 1.6;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── STEPPER (SIMULADOR) ── */
+.stepper { display: flex; gap: 4px; flex-wrap: wrap; margin: 4px 0 14px; }
+.step-btn {
+  flex: 1; min-width: 90px; padding: 10px 8px; border-radius: 8px; border: 1.5px solid var(--border);
+  background: transparent; font-size: 11px; font-weight: 700; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace; color: var(--muted); transition: all .15s; text-align: center;
+}
+.step-btn:hover { border-color: var(--accent); color: var(--text); }
+.step-btn.active { background: var(--grad); color: #fff; border-color: transparent; box-shadow: 0 2px 10px rgba(141,98,255,.3); }
+.step-btn.past { border-color: var(--accent2); color: #0a7a5a; }
+
+footer { text-align: center; margin-top: 3rem; font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+footer span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; }
+
+@media (max-width: 600px) {
+  .tab { min-width: 80px; font-size: 12px; }
+  .timeline-item { grid-template-columns: 1fr; gap: 4px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <img class="header-logo" src="https://capacitabrasil.irede.org.br/assets/capacitaLogo-Ct3BEyem.png" alt="Capacita Brasil"/>
+  <div class="logo">&#x2615; <span>//</span> Java</div>
+  <div class="subtitle">Desenvolvimento Java &mdash; Aula Interativa</div>
+  <div class="header-badge">Assunto 04 &mdash; Aulas 07 e 08 &mdash; Web Services e CRUD com REST e Spring Boot</div>
+</header>
+
+<div class="wrap">
+
+  <a href="../index.html#assunto04" style="display:inline-block;margin-bottom:1rem;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--muted);text-decoration:none">&#x2190; Voltar ao Sumário</a>
+
+  <div class="aula-bar">
+    <button class="aula-tab active">&#x1F4C5; 17 e 19/11 &mdash; Web Services e CRUD com REST</button>
+  </div>
+
+  <div id="aula01" class="aula-section active">
+
+  <div class="tab-bar">
+    <button class="tab active"  onclick="showTab('resumo1',this)">&#x1F4D8; Resumo</button>
+    <button class="tab"         onclick="showTab('simulador1',this)">&#x26A1; Simulador</button>
+    <button class="tab"         onclick="showTab('exercicios1',this)">&#x1F3AF; Exercícios</button>
+    <button class="tab"         onclick="showTab('questionarios1',this)">&#x1F4DD; Questionários</button>
+    <button class="tab"         onclick="showTab('curiosidades1',this)">&#x1F680; Curiosidades</button>
+    <button class="tab"         onclick="showTab('links1',this)">&#x1F517; Links</button>
+  </div>
+
+  <!-- ═══ RESUMO ═══ -->
+  <div id="resumo1" class="section active">
+
+    <!-- Card 1: O que vamos construir -->
+    <div class="card">
+      <div class="card-title">&#x1F3AF; O que vamos construir <span class="pill pill-grad">Task Manager API</span> <span class="pill pill-java">Fase 2 &middot; API REST</span></div>
+      <p>A Fase 1 terminou com a release <span class="ic">v0.1.0</span>: as entidades <span class="ic">Tarefa</span>, <span class="ic">Usuario</span> e <span class="ic">Etiqueta</span> estão mapeadas, e o <span class="ic">TarefaRepository</span> tem consultas JPQL e filtros com Criteria. Mas tudo roda no console, por um <span class="ic">CommandLineRunner</span>. Nesta semana o projeto <strong style="color:var(--text)">vira uma API</strong>: outras aplicações (e o Postman) passam a conversar com ele por <strong style="color:var(--text)">HTTP</strong>.</p>
+      <table>
+        <tr><th>Aula</th><th>O que entra no projeto</th><th>Tag</th></tr>
+        <tr><td>07 &middot; 17/11</td><td class="left">Adicionar o <span class="ic">spring-boot-starter-web</span>, mover a carga de dados para <span class="ic">config/CargaInicial</span>, criar o <span class="ic">TarefaController</span> com os endpoints <strong>GET</strong> e montar a <strong>coleção do Postman</strong>, que a partir de agora faz parte do critério de pronto.</td><td><span class="ic">aula-07</span></td></tr>
+        <tr><td>08 &middot; 19/11</td><td class="left">Implementar <strong>POST, PUT e DELETE</strong> de tarefas, devolver os status corretos com <span class="ic">ResponseEntity</span> e validar a entrada com <strong>Bean Validation</strong> (<span class="ic">@Valid</span>, <span class="ic">@NotBlank</span>, <span class="ic">@NotNull</span>).</td><td><span class="ic">aula-08</span></td></tr>
+      </table>
+      <p style="margin-top:6px">Os endpoints que existirão ao fim da aula 08:</p>
+      <div class="code-block"><span class="kw">GET</span>    /api/v1/tarefas                  <span class="cmt">→ 200 lista todas</span>
+<span class="kw">GET</span>    /api/v1/tarefas/{id}             <span class="cmt">→ 200 ou 404</span>
+<span class="kw">POST</span>   /api/v1/tarefas?usuarioId={id}   <span class="cmt">→ 201, 400 ou 404</span>
+<span class="kw">PUT</span>    /api/v1/tarefas/{id}             <span class="cmt">→ 200, 400 ou 404</span>
+<span class="kw">DELETE</span> /api/v1/tarefas/{id}             <span class="cmt">→ 204 ou 404</span></div>
+      <div class="warn-block">&#x1F4CC; Ainda sem camada de serviço e sem DTOs: nesta semana o controller usa direto o repositório e a entidade. ErrorResponse e GlobalExceptionHandler chegam na aula 09, os DTOs na aula 10 e o TarefaService na aula 11.</div>
+    </div>
+
+    <!-- Card 2: O que é um Web Service -->
+    <div class="card">
+      <div class="card-title">&#x1F310; O que é um Web Service? <span class="pill pill-blue">Aula 07</span></div>
+      <p>É uma forma de <strong style="color:var(--text)">comunicação entre aplicações através da rede</strong> (Internet).</p>
+      <p style="margin-top:10px">Permite a <strong style="color:var(--text)">interoperabilidade</strong>:</p>
+      <p>&#x1F539; Um app <strong style="color:var(--text)">Java</strong> pode "conversar" com um app <strong style="color:var(--text)">Python</strong>.</p>
+      <p>&#x1F539; Um app <strong style="color:var(--text)">mobile</strong> (iOS/Android) pode "conversar" com um <strong style="color:var(--text)">servidor Linux</strong>.</p>
+      <p style="margin-top:10px">&#x1F37D; <strong style="color:var(--text)">Analogia</strong>: um <strong style="color:var(--text)">"garçom" (API)</strong> que pega seu <strong style="color:var(--text)">pedido (requisição)</strong> e o leva para a <strong style="color:var(--text)">cozinha (servidor)</strong>, trazendo seu <strong style="color:var(--text)">prato (resposta)</strong>.</p>
+      <div class="code-block"><span class="cls">Cliente</span>                       <span class="ann">Garçom (API)</span>                <span class="typ">Cozinha (servidor)</span>
+Postman / app / site   ──&gt;   <span class="kw">GET</span> /api/v1/tarefas/1   ──&gt;   TarefaController
+                                                            TarefaRepository
+                                                            PostgreSQL
+                       &lt;──   <span class="num">200</span> OK + JSON          &lt;──   <span class="str">{ "id": 1, ... }</span></div>
+      <p style="margin-top:10px">No Task Manager, quem faz o papel de garçom é o <strong style="color:var(--text)">Spring Web</strong>: ele recebe a requisição HTTP, chama o método certo do controller e devolve a resposta em JSON. O cliente não precisa saber que existe um PostgreSQL nem que a API foi escrita em Java.</p>
+    </div>
+
+    <!-- Card 3: SOAP vs REST -->
+    <div class="card">
+      <div class="card-title">&#x2696; SOAP vs. REST <span class="pill pill-blue">Aula 07</span> <span class="pill pill-grad">Comparativo</span></div>
+      <table>
+        <tr><th></th><th>SOAP<br/>Simple Object Access Protocol</th><th>REST<br/>REpresentational State Transfer</th></tr>
+        <tr><td class="left">O que é</td><td>É um <strong>PROTOCOLO</strong></td><td>É um <strong>ESTILO DE ARQUITETURA</strong></td></tr>
+        <tr><td class="left">Foco</td><td>Ações (<span class="ic">getUsuario()</span>)</td><td>Recursos (<span class="ic">/usuarios</span>)</td></tr>
+        <tr><td class="left">Formato</td><td>XML (sempre)</td><td>JSON (comum), XML etc.</td></tr>
+        <tr><td class="left">Contrato</td><td>Rígido (WSDL)</td><td>Flexível (usa o HTTP)</td></tr>
+        <tr><td class="left">Peso</td><td>"Heavyweight" (pesado, verboso)</td><td>"Lightweight" (leve, simples)</td></tr>
+      </table>
+      <div class="output-label">A mesma consulta nos dois estilos</div>
+      <div class="code-block"><span class="cmt">&lt;!-- SOAP: sempre POST em um único endereço; a AÇÃO vai dentro do XML --&gt;</span>
+<span class="kw">POST</span> /ws/tarefas
+&lt;<span class="cls">soap:Envelope</span> <span class="mtd">xmlns:soap</span>=<span class="str">"http://schemas.xmlsoap.org/soap/envelope/"</span>&gt;
+  &lt;<span class="cls">soap:Body</span>&gt;
+    &lt;<span class="cls">getTarefa</span>&gt;&lt;<span class="cls">id</span>&gt;1&lt;/<span class="cls">id</span>&gt;&lt;/<span class="cls">getTarefa</span>&gt;
+  &lt;/<span class="cls">soap:Body</span>&gt;
+&lt;/<span class="cls">soap:Envelope</span>&gt;
+
+<span class="cmt"># REST: o RECURSO está na URI e a ação é o verbo HTTP</span>
+<span class="kw">GET</span> /api/v1/tarefas/1</div>
+      <p style="margin-top:10px">O Task Manager é uma API <strong style="color:var(--text)">REST</strong>. SOAP ainda aparece em integrações corporativas e governamentais mais antigas, mas APIs novas costumam seguir o estilo REST com JSON.</p>
+    </div>
+
+    <!-- Card 4: URIs e Recursos -->
+    <div class="card">
+      <div class="card-title">&#x1F517; URIs e Recursos <span class="pill pill-blue">Aula 07</span></div>
+      <p>&#x1F539; Um <strong style="color:var(--text)">recurso</strong> é qualquer informação que pode ser <strong style="color:var(--text)">nomeada</strong>: um usuário, um produto, um carrinho de compras, uma coleção de pedidos.</p>
+      <p>&#x1F539; A forma como <strong style="color:var(--text)">nomeamos e endereçamos</strong> esses recursos é através de uma <strong style="color:var(--text)">URI (Uniform Resource Identifier)</strong>.</p>
+      <table>
+        <tr><th>Recurso no Task Manager</th><th>URI</th></tr>
+        <tr><td class="left">A coleção de todas as tarefas</td><td>/api/v1/tarefas</td></tr>
+        <tr><td class="left">A tarefa de id 1</td><td>/api/v1/tarefas/1</td></tr>
+        <tr><td class="left">A coleção de usuários</td><td>/api/v1/usuarios</td></tr>
+        <tr><td class="left">O usuário de id 2</td><td>/api/v1/usuarios/2</td></tr>
+      </table>
+      <div class="code-block"><span class="str">http://</span>   <span class="typ">localhost:8080</span>   <span class="ann">/api/v1</span>   <span class="cls">/tarefas</span>   <span class="num">/1</span>
+<span class="cmt">esquema   servidor         versão    recurso    id</span></div>
+      <div class="warn-block">&#x1F4A1; Convenção REST: URIs usam substantivos no plural (tarefas, usuarios), nunca verbos. Nada de /buscarTarefa?id=1 ou /deletarTarefa/1: quem diz a ação é o verbo HTTP (próximo card).</div>
+    </div>
+
+    <!-- Card 5: Verbos HTTP -->
+    <div class="card">
+      <div class="card-title">&#x1F6A6; Os Métodos (Verbos) HTTP <span class="pill pill-blue">Aula 07</span> <span class="pill pill-green">CRUD</span></div>
+      <table>
+        <tr><th>Verbo HTTP</th><th>Operação CRUD</th><th>Exemplo de URI</th><th>Descrição</th></tr>
+        <tr><td>GET</td><td>Read (Ler)</td><td>/produtos/1</td><td class="left">Busca o produto com ID 1.</td></tr>
+        <tr><td>POST</td><td>Create (Criar)</td><td>/produtos</td><td class="left">Cria um novo produto (dados no corpo).</td></tr>
+        <tr><td>PUT</td><td>Update (Atualizar)</td><td>/produtos/1</td><td class="left">Substitui totalmente o produto 1.</td></tr>
+        <tr><td>DELETE</td><td>Delete (Deletar)</td><td>/produtos/1</td><td class="left">Remove o produto 1.</td></tr>
+      </table>
+      <p style="margin-top:6px">No Task Manager, a mesma tabela fica assim:</p>
+      <div class="code-block"><span class="kw">GET</span>    /api/v1/tarefas/1   <span class="cmt">// busca a tarefa 1</span>
+<span class="kw">POST</span>   /api/v1/tarefas     <span class="cmt">// cria uma tarefa (dados no corpo, em JSON)</span>
+<span class="kw">PUT</span>    /api/v1/tarefas/1   <span class="cmt">// substitui totalmente a tarefa 1</span>
+<span class="kw">DELETE</span> /api/v1/tarefas/1   <span class="cmt">// remove a tarefa 1</span></div>
+      <p style="margin-top:10px">Toda resposta HTTP traz um <strong style="color:var(--text)">código de status</strong>: <span class="ic">2xx</span> sucesso, <span class="ic">4xx</span> erro do cliente (pediu algo errado), <span class="ic">5xx</span> erro do servidor. Os códigos que vamos usar estão no card "Boas Práticas em APIs RESTful".</p>
+    </div>
+
+    <!-- Card 6: XML vs JSON -->
+    <div class="card">
+      <div class="card-title">&#x1F4E6; Formatos de Dados: XML vs. JSON <span class="pill pill-blue">Aula 07</span></div>
+      <div class="output-label">XML (eXtensible Markup Language)</div>
+      <div class="code-block">&lt;<span class="cls">usuario</span>&gt;
+    &lt;<span class="cls">id</span>&gt;<span class="num">1</span>&lt;/<span class="cls">id</span>&gt;
+    &lt;<span class="cls">nome</span>&gt;Ana Silva&lt;/<span class="cls">nome</span>&gt;
+    &lt;<span class="cls">email</span>&gt;ana.silva@exemplo.com&lt;/<span class="cls">email</span>&gt;
+&lt;/<span class="cls">usuario</span>&gt;</div>
+      <div class="output-label">JSON (JavaScript Object Notation)</div>
+      <div class="code-block">{
+  <span class="mtd">"id"</span>: <span class="num">1</span>,
+  <span class="mtd">"nome"</span>: <span class="str">"Ana Silva"</span>,
+  <span class="mtd">"email"</span>: <span class="str">"ana.silva@exemplo.com"</span>
+}</div>
+      <p style="margin-top:10px">O JSON é mais curto (não repete o nome de cada campo na abertura e no fechamento) e é o formato padrão do Spring Web. Quem converte objeto Java &harr; JSON é a biblioteca <strong style="color:var(--text)">Jackson</strong>, que já vem no <span class="ic">spring-boot-starter-web</span>. Uma <span class="ic">Tarefa</span> do Task Manager sai assim:</p>
+      <div class="code-block">{
+  <span class="mtd">"id"</span>: <span class="num">1</span>,
+  <span class="mtd">"titulo"</span>: <span class="str">"Estudar JPA"</span>,
+  <span class="mtd">"descricao"</span>: <span class="str">"Revisar @Entity e @Id"</span>,
+  <span class="mtd">"concluida"</span>: <span class="kw">false</span>,
+  <span class="mtd">"prazo"</span>: <span class="str">"2026-11-05"</span>,              <span class="cmt">// LocalDate vira texto ISO</span>
+  <span class="mtd">"prioridade"</span>: <span class="str">"ALTA"</span>,                <span class="cmt">// enum vira o nome da constante</span>
+  <span class="mtd">"etiquetas"</span>: [ { <span class="mtd">"id"</span>: <span class="num">1</span>, <span class="mtd">"nome"</span>: <span class="str">"Estudo"</span> }, { <span class="mtd">"id"</span>: <span class="num">3</span>, <span class="mtd">"nome"</span>: <span class="str">"Urgente"</span> } ]
+}</div>
+    </div>
+
+    <!-- Card 7: Primeiro endpoint -->
+    <div class="card">
+      <div class="card-title">&#x1F9E9; O Primeiro Endpoint do Task Manager <span class="pill pill-blue">Aula 07</span> <span class="pill pill-green">GET</span></div>
+      <p>&#x1F539; <strong style="color:var(--text)">1. Camada web no pom.xml</strong>. Até a <span class="ic">v0.1.0</span> o projeto só tinha <span class="ic">spring-boot-starter</span> e <span class="ic">data-jpa</span>. O starter web traz o Spring MVC, o Jackson e um <strong style="color:var(--text)">Tomcat embutido</strong>:</p>
+      <div class="code-block">&lt;<span class="cls">dependency</span>&gt;
+    &lt;<span class="cls">groupId</span>&gt;org.springframework.boot&lt;/<span class="cls">groupId</span>&gt;
+    &lt;<span class="cls">artifactId</span>&gt;spring-boot-starter-web&lt;/<span class="cls">artifactId</span>&gt;
+&lt;/<span class="cls">dependency</span>&gt;</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">2. Carga de dados fora da classe principal</strong>. O <span class="ic">carregarDados()</span> e os <span class="ic">System.out</span> saem da <span class="ic">TaskmanagerApiApplication</span> e vão para <span class="ic">config/CargaInicial</span> (um <span class="ic">@Component</span> que implementa <span class="ic">CommandLineRunner</span>). Com <span class="ic">ddl-auto=create</span>, a API sobe sempre com os mesmos 3 usuários e 8 tarefas.</p>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">3. O controller com GET</strong>:</p>
+      <div class="code-block"><span class="kw">package</span> br.org.irede.taskmanagerapi.controller;
+
+<span class="kw">import</span> br.org.irede.taskmanagerapi.model.Tarefa;
+<span class="kw">import</span> br.org.irede.taskmanagerapi.repository.TarefaRepository;
+<span class="kw">import</span> java.util.List;
+<span class="kw">import</span> org.springframework.web.bind.annotation.*;
+
+<span class="ann">@RestController</span>
+<span class="ann">@RequestMapping</span>(<span class="str">"/api/v1/tarefas"</span>)
+<span class="kw">public class</span> <span class="cls">TarefaController</span> {
+
+    <span class="kw">private final</span> <span class="cls">TarefaRepository</span> repository;
+
+    <span class="kw">public</span> <span class="cls">TarefaController</span>(<span class="cls">TarefaRepository</span> repository) {
+        <span class="kw">this</span>.repository = repository;
+    }
+
+    <span class="ann">@GetMapping</span>
+    <span class="kw">public</span> <span class="typ">List</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">listar</span>() {
+        <span class="kw">return</span> repository.<span class="mtd">findAll</span>();
+    }
+
+    <span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)
+    <span class="kw">public</span> <span class="cls">Tarefa</span> <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+        <span class="kw">return</span> repository.<span class="mtd">findById</span>(id).<span class="mtd">orElse</span>(<span class="kw">null</span>);   <span class="cmt">// melhora na aula 08</span>
+    }
+}</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">4. Entidade &rarr; JSON: o @JsonIgnore</strong>. Ao devolver a entidade, o Jackson tenta serializar <strong style="color:var(--text)">todos</strong> os atributos. Dois deles dão problema:</p>
+      <table>
+        <tr><th>Atributo</th><th>Problema</th><th>Correção (por enquanto)</th></tr>
+        <tr><td>Tarefa.usuario</td><td class="left">É LAZY: o Jackson encontra um <em>proxy</em> do Hibernate e falha (e ainda exporia a senha do usuário).</td><td><span class="ic">@JsonIgnore</span></td></tr>
+        <tr><td>Etiqueta.tarefas</td><td class="left">Tarefa &rarr; etiquetas &rarr; tarefas &rarr; etiquetas... recursão infinita.</td><td><span class="ic">@JsonIgnore</span></td></tr>
+      </table>
+      <div class="code-block"><span class="cmt">// Tarefa.java</span>
+<span class="ann">@JsonIgnore</span>                                  <span class="cmt">// com.fasterxml.jackson.annotation.JsonIgnore</span>
+<span class="ann">@ManyToOne</span>(fetch = <span class="typ">FetchType</span>.LAZY)
+<span class="ann">@JoinColumn</span>(name=<span class="str">"usuario_id"</span>, nullable = <span class="kw">false</span>)
+<span class="kw">private</span> <span class="cls">Usuario</span> usuario;
+
+<span class="cmt">// Etiqueta.java</span>
+<span class="ann">@JsonIgnore</span>
+<span class="ann">@ManyToMany</span>(mappedBy = <span class="str">"etiquetas"</span>)
+<span class="kw">private</span> <span class="typ">Set</span>&lt;<span class="cls">Tarefa</span>&gt; tarefas = <span class="kw">new</span> <span class="typ">HashSet</span>();</div>
+      <div class="output-label">Sem o @JsonIgnore em Tarefa.usuario (console)</div>
+      <div class="output-block"><span style="color:#f38ba8">org.springframework.http.converter.HttpMessageConversionException: Type definition error: [simple type, class org.hibernate.proxy.pojo.bytebuddy.ByteBuddyInterceptor]
+Caused by: com.fasterxml.jackson.databind.exc.InvalidDefinitionException: No serializer found for class org.hibernate.proxy.pojo.bytebuddy.ByteBuddyInterceptor and no properties discovered to create BeanSerializer (to avoid exception, disable SerializationFeature.FAIL_ON_EMPTY_BEANS) (through reference chain: java.util.ArrayList[0]-&gt;br.org.irede.taskmanagerapi.model.Tarefa["usuario"]-&gt;br.org.irede.taskmanagerapi.model.Usuario$HibernateProxy["hibernateLazyInitializer"])</span></div>
+      <div class="warn-block">&#x1F6A7; O @JsonIgnore é um paliativo: ele mistura regra de API dentro da entidade JPA. Na aula 10 os DTOs resolvem isso de vez, e o @JsonIgnore é removido.</div>
+    </div>
+
+    <!-- Card 8: Postman -->
+    <div class="card">
+      <div class="card-title">&#x1F4EE; Demonstração Prática: Postman <span class="pill pill-blue">Aula 07</span> <span class="pill pill-amber">Critério de pronto</span></div>
+      <p>O <strong style="color:var(--text)">Postman</strong> é um cliente HTTP com interface gráfica: você escolhe o verbo, digita a URI, monta o corpo em JSON e vê o status, os cabeçalhos e o corpo da resposta. A partir da aula 07, <strong style="color:var(--text)">todo endpoint do Task Manager precisa estar na coleção do Postman</strong>.</p>
+      <p style="margin-top:10px">&#x1F539; Crie a coleção <strong style="color:var(--text)">Task Manager API</strong> e, na aba <em>Variables</em> dela, a variável <span class="ic">baseUrl</span> = <span class="ic">http://localhost:8080/api/v1</span>.</p>
+      <p>&#x1F539; Cada requisição usa a variável: <span class="ic">{{baseUrl}}/tarefas</span>. Se a porta ou a versão mudarem, você altera em um lugar só.</p>
+      <p>&#x1F539; Ao fim da aula, exporte a coleção (<em>&middot;&middot;&middot; &rarr; Export &rarr; Collection v2.1</em>) e versione o arquivo junto com o projeto.</p>
+      <div class="code-block">&#x1F4C1; Task Manager API
+ ├── <span class="num">GET</span>    Listar tarefas      {{baseUrl}}/tarefas
+ ├── <span class="num">GET</span>    Buscar tarefa       {{baseUrl}}/tarefas/1
+ ├── <span class="str">POST</span>   Criar tarefa        {{baseUrl}}/tarefas?usuarioId=1      <span class="cmt">(aula 08)</span>
+ ├── <span class="mtd">PUT</span>    Atualizar tarefa    {{baseUrl}}/tarefas/5                <span class="cmt">(aula 08)</span>
+ └── <span class="ann">DELETE</span> Remover tarefa      {{baseUrl}}/tarefas/8                <span class="cmt">(aula 08)</span></div>
+      <div class="output-label">GET {{baseUrl}}/tarefas/1 &mdash; o que o Postman mostra</div>
+      <div class="output-block"><span style="color:#89dceb">Status: 200 OK   Time: 38 ms   Size: 312 B</span>
+<span style="color:#cdd6f4">Content-Type: application/json</span>
+
+{
+  "id": 1,
+  "titulo": "Estudar JPA",
+  "descricao": "Revisar @Entity e @Id",
+  "concluida": false,
+  "prazo": "2026-11-05",
+  "prioridade": "ALTA",
+  "etiquetas": [ { "id": 1, "nome": "Estudo" }, { "id": 3, "nome": "Urgente" } ]
+}</div>
+      <p style="margin-top:10px"><strong style="color:var(--text)">Material de apoio</strong>: os conteúdos complementares deste capítulo estão nas próximas seções da plataforma.</p>
+    </div>
+
+    <!-- Card 9: Mapeamento CRUD → REST + anotações -->
+    <div class="card">
+      <div class="card-title">&#x1F5FA; Mapeamento Padrão de CRUD para REST <span class="pill pill-green">Aula 08</span> <span class="pill pill-grad">Spring Web</span></div>
+      <p>A arquitetura REST propõe um <strong style="color:var(--text)">padrão claro</strong> para as operações básicas de CRUD (<em>Create, Read, Update, Delete</em>) sobre um recurso (ex.: Produto):</p>
+      <table>
+        <tr><th>Operação CRUD</th><th>Verbo HTTP</th><th>URI</th><th>Descrição da ação</th></tr>
+        <tr><td>Create</td><td>POST</td><td>/produtos</td><td class="left">Cria um novo produto.</td></tr>
+        <tr><td>Read</td><td>GET</td><td>/produtos/{id}</td><td class="left">Lê os dados de um produto específico.</td></tr>
+        <tr><td>Update</td><td>PUT</td><td>/produtos/{id}</td><td class="left">Substitui totalmente um produto existente.</td></tr>
+        <tr><td>Delete</td><td>DELETE</td><td>/produtos/{id}</td><td class="left">Remove um produto específico.</td></tr>
+      </table>
+      <p style="margin-top:10px"><strong style="color:var(--text)">Anotações do Spring Web</strong>:</p>
+      <table>
+        <tr><th>Anotação</th><th>Função</th></tr>
+        <tr><td>@RestController</td><td class="left">Define a classe como um controlador REST (as respostas saem em JSON).</td></tr>
+        <tr><td>@RequestMapping("/api/v1/produtos")</td><td class="left">URI base para a classe.</td></tr>
+        <tr><td>@GetMapping</td><td class="left">Mapeia requisições GET.</td></tr>
+        <tr><td>@PostMapping</td><td class="left">Mapeia requisições POST.</td></tr>
+        <tr><td>@PutMapping</td><td class="left">Mapeia requisições PUT.</td></tr>
+        <tr><td>@DeleteMapping</td><td class="left">Mapeia requisições DELETE.</td></tr>
+      </table>
+      <p style="margin-top:10px"><strong style="color:var(--text)">Recebendo dados</strong>:</p>
+      <p>&#x1F539; <span class="ic">@PathVariable</span>: <strong style="color:var(--text)">extrai um valor da URI</strong>. <span class="ic">GET /produtos/{id}</span> &rarr; <span class="ic">public Produto get(@PathVariable Long id)</span></p>
+      <p>&#x1F539; <span class="ic">@RequestBody</span>: <strong style="color:var(--text)">converte o corpo (JSON)</strong> da requisição em um objeto Java. <span class="ic">POST /produtos</span> &rarr; <span class="ic">public Produto create(@RequestBody Produto p)</span></p>
+      <div class="code-block"><span class="cmt">// No Task Manager: a URI da classe + a do método formam o endereço final</span>
+<span class="ann">@RequestMapping</span>(<span class="str">"/api/v1/tarefas"</span>)              <span class="cmt">// classe</span>
+<span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)                           <span class="cmt">// método → GET /api/v1/tarefas/{id}</span>
+<span class="kw">public</span> <span class="cls">Tarefa</span> <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id)   <span class="cmt">// "/tarefas/5" → id = 5</span>
+
+<span class="ann">@PostMapping</span>                                     <span class="cmt">// POST /api/v1/tarefas</span>
+<span class="kw">public</span> <span class="cls">Tarefa</span> <span class="mtd">criar</span>(<span class="ann">@RequestBody</span> <span class="cls">Tarefa</span> tarefa)       <span class="cmt">// JSON do corpo → objeto Tarefa</span></div>
+      <p style="margin-top:10px">&#x1F4BB; <strong style="color:var(--text)">Demonstração prática: criando um Web Service REST com Spring Boot.</strong> <strong style="color:var(--text)">Material de apoio</strong>: os conteúdos complementares deste capítulo estão nas próximas seções da plataforma.</p>
+    </div>
+
+    <!-- Card 10: Conectando ao banco com JPA -->
+    <div class="card">
+      <div class="card-title">&#x1F5C4; Conectando ao Banco de Dados com JPA <span class="pill pill-green">Aula 08</span></div>
+      <p>No slide, o primeiro controller guarda os produtos em uma <span class="ic">List</span> na memória, que se perde a cada reinício. O próximo passo é <strong style="color:var(--text)">substituir essa List volátil por um banco</strong> (no slide, o H2).</p>
+      <p style="margin-top:10px"><strong style="color:var(--text)">O ecossistema de persistência</strong>:</p>
+      <p>&#x1F539; <strong style="color:var(--text)">Spring Web</strong>: nossos controladores REST.</p>
+      <p>&#x1F539; <strong style="color:var(--text)">Spring Data JPA</strong>: facilita a criação de repositórios (DAOs).</p>
+      <p>&#x1F539; <strong style="color:var(--text)">Hibernate</strong>: a implementação (motor) da JPA.</p>
+      <p>&#x1F539; <strong style="color:var(--text)">H2 Database</strong>: banco de dados em memória para desenvolvimento.</p>
+      <div class="output-label">Dependências (pom.xml) &mdash; slide</div>
+      <div class="code-block">&lt;<span class="cls">dependency</span>&gt;
+    &lt;<span class="cls">groupId</span>&gt;org.springframework.boot&lt;/<span class="cls">groupId</span>&gt;
+    &lt;<span class="cls">artifactId</span>&gt;spring-boot-starter-data-jpa&lt;/<span class="cls">artifactId</span>&gt;
+&lt;/<span class="cls">dependency</span>&gt;
+&lt;<span class="cls">dependency</span>&gt;
+    &lt;<span class="cls">groupId</span>&gt;com.h2database&lt;/<span class="cls">groupId</span>&gt;
+    &lt;<span class="cls">artifactId</span>&gt;h2&lt;/<span class="cls">artifactId</span>&gt;
+    &lt;<span class="cls">scope</span>&gt;runtime&lt;/<span class="cls">scope</span>&gt;
+&lt;/<span class="cls">dependency</span>&gt;</div>
+      <p style="margin-top:10px"><strong style="color:var(--text)">Entidade</strong>: anotamos a classe de modelo <span class="ic">Produto</span> com <span class="ic">@Entity</span> e <span class="ic">@Id</span>.</p>
+      <div class="code-block"><span class="ann">@Entity</span>
+<span class="ann">@Table</span>(name = <span class="str">"tb_produto"</span>)
+<span class="kw">public class</span> <span class="cls">Produto</span> {
+    <span class="ann">@Id</span>
+    <span class="ann">@GeneratedValue</span>(strategy = <span class="typ">GenerationType</span>.IDENTITY)
+    <span class="kw">private</span> <span class="typ">Long</span> id;
+    <span class="kw">private</span> <span class="typ">String</span> nome;
+    <span class="cmt">// ...</span>
+}</div>
+      <p style="margin-top:10px"><strong style="color:var(--text)">Repositório</strong>: não precisamos de código, <strong style="color:var(--text)">apenas de uma interface</strong>! Ao estender <span class="ic">JpaRepository</span>, ganhamos de graça os métodos <span class="ic">save()</span> (cria e atualiza), <span class="ic">findById()</span> (busca por ID), <span class="ic">findAll()</span> (busca todos), <span class="ic">deleteById()</span> (deleta)... e muito mais.</p>
+      <div class="code-block"><span class="ann">@Repository</span>
+<span class="kw">public interface</span> <span class="cls">ProdutoRepository</span>
+        <span class="kw">extends</span> <span class="typ">JpaRepository</span>&lt;<span class="cls">Produto</span>, <span class="typ">Long</span>&gt; {
+}</div>
+      <p style="margin-top:10px"><strong style="color:var(--text)">No Task Manager essa parte já está pronta desde a Fase 1</strong>, com PostgreSQL no lugar do H2:</p>
+      <table>
+        <tr><th>Slide</th><th>Task Manager</th></tr>
+        <tr><td>h2 (memória)</td><td>postgresql (banco <span class="ic">taskmanager</span>, porta 5436)</td></tr>
+        <tr><td>Produto / tb_produto</td><td>Tarefa / tarefas</td></tr>
+        <tr><td>ProdutoRepository</td><td>TarefaRepository (com JPQL e Criteria)</td></tr>
+      </table>
+      <div class="code-block"><span class="ann">@Repository</span>
+<span class="kw">public interface</span> <span class="cls">TarefaRepository</span> <span class="kw">extends</span> <span class="typ">JpaRepository</span>&lt;<span class="cls">Tarefa</span>, <span class="typ">Long</span>&gt;, <span class="cls">TarefaRepositoryCustom</span> {
+    <span class="cmt">// findByUsuarioId, findByUsuarioIdAndConcluida, contarPorPrioridade... (aulas 05 e 06)</span>
+}</div>
+      <p style="margin-top:10px">&#x1F4DA; <strong style="color:var(--text)">Para entender melhor o conteúdo</strong>: vamos ver o que seria necessário para conectar um banco de dados real usando Spring Data JPA. Acompanhe tudo em <strong style="color:var(--text)">"Conectando Banco de Dados"</strong>, nas próximas seções da plataforma.</p>
+    </div>
+
+    <!-- Card 11: Refatorando o controlador -->
+    <div class="card">
+      <div class="card-title">&#x1F527; Refatorando o Controlador <span class="pill pill-green">Aula 08</span> <span class="pill pill-blue">POST &middot; PUT &middot; DELETE</span></div>
+      <p>&#x1F539; <strong style="color:var(--text)">Injetamos o repositório</strong> (via construtor, é a melhor prática).</p>
+      <p>&#x1F539; <strong style="color:var(--text)">Substituímos a lógica da List</strong> pelos métodos do repositório.</p>
+      <div class="output-label">Slide</div>
+      <div class="code-block"><span class="ann">@RestController</span>
+<span class="ann">@RequestMapping</span>(<span class="str">"/api/v1/produtos"</span>)
+<span class="kw">public class</span> <span class="cls">ProdutoController</span> {
+    <span class="kw">private final</span> <span class="cls">ProdutoRepository</span> repository;
+    <span class="kw">public</span> <span class="cls">ProdutoController</span>(<span class="cls">ProdutoRepository</span> repository) {
+        <span class="kw">this</span>.repository = repository;
+    }
+
+    <span class="ann">@PostMapping</span>
+    <span class="kw">public</span> <span class="cls">Produto</span> <span class="mtd">criar</span>(<span class="ann">@RequestBody</span> <span class="cls">Produto</span> p) {
+        <span class="kw">return</span> repository.<span class="mtd">save</span>(p); <span class="cmt">// Salva no banco!</span>
+    }
+}</div>
+      <p style="margin-top:10px">No Task Manager, toda tarefa precisa de um dono (<span class="ic">usuario_id NOT NULL</span>). Como <span class="ic">usuario</span> está com <span class="ic">@JsonIgnore</span>, o id do dono vem na URI, com <span class="ic">@RequestParam</span>: <span class="ic">POST /api/v1/tarefas?usuarioId=1</span>.</p>
+      <div class="output-label">TarefaController &mdash; versão do slide (antes do ResponseEntity)</div>
+      <div class="code-block">    <span class="kw">private final</span> <span class="cls">TarefaRepository</span> repository;
+    <span class="kw">private final</span> <span class="cls">UsuarioRepository</span> usuarioRepository;
+
+    <span class="kw">public</span> <span class="cls">TarefaController</span>(<span class="cls">TarefaRepository</span> repository, <span class="cls">UsuarioRepository</span> usuarioRepository) {
+        <span class="kw">this</span>.repository = repository;
+        <span class="kw">this</span>.usuarioRepository = usuarioRepository;
+    }
+
+    <span class="ann">@PostMapping</span>
+    <span class="kw">public</span> <span class="cls">Tarefa</span> <span class="mtd">criar</span>(<span class="ann">@RequestBody</span> <span class="cls">Tarefa</span> tarefa, <span class="ann">@RequestParam</span> <span class="typ">Long</span> usuarioId) {
+        tarefa.<span class="mtd">setUsuario</span>(usuarioRepository.<span class="mtd">findById</span>(usuarioId).<span class="mtd">orElseThrow</span>());
+        <span class="kw">return</span> repository.<span class="mtd">save</span>(tarefa); <span class="cmt">// Salva no banco!</span>
+    }
+
+    <span class="ann">@PutMapping</span>(<span class="str">"/{id}"</span>)
+    <span class="kw">public</span> <span class="cls">Tarefa</span> <span class="mtd">atualizar</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id, <span class="ann">@RequestBody</span> <span class="cls">Tarefa</span> dados) {
+        <span class="cls">Tarefa</span> tarefa = repository.<span class="mtd">findById</span>(id).<span class="mtd">orElseThrow</span>();
+        tarefa.<span class="mtd">setTitulo</span>(dados.<span class="mtd">getTitulo</span>());          <span class="cmt">// PUT substitui TODOS os campos</span>
+        tarefa.<span class="mtd">setDescricao</span>(dados.<span class="mtd">getDescricao</span>());
+        tarefa.<span class="mtd">setPrioridade</span>(dados.<span class="mtd">getPrioridade</span>());
+        tarefa.<span class="mtd">setPrazo</span>(dados.<span class="mtd">getPrazo</span>());
+        tarefa.<span class="mtd">setConcluida</span>(dados.<span class="mtd">isConcluida</span>());
+        <span class="kw">return</span> repository.<span class="mtd">save</span>(tarefa);
+    }
+
+    <span class="ann">@DeleteMapping</span>(<span class="str">"/{id}"</span>)
+    <span class="kw">public void</span> <span class="mtd">remover</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+        repository.<span class="mtd">deleteById</span>(id);
+    }</div>
+      <div class="warn-block">&#x26A0; Funciona, mas todas as respostas saem com 200 OK, inclusive o POST, que deveria ser 201. E um id inexistente estoura uma exceção (500). O card "Boas Práticas" corrige isso com ResponseEntity.</div>
+    </div>
+
+    <!-- Card 12: Validações -->
+    <div class="card">
+      <div class="card-title">&#x2705; Validações com @Valid e @NotNull <span class="pill pill-green">Aula 08</span> <span class="pill pill-red">400 Bad Request</span></div>
+      <p>Receber dados em um endpoint POST ou PUT é um risco. O que acontece se o cliente enviar um JSON sem o campo "nome"? Ou com um "preço" negativo? A regra de ouro da programação back-end é: <strong style="color:var(--text)">"Nunca confie na entrada do usuário"</strong>.</p>
+      <div class="output-label">Slide</div>
+      <div class="code-block"><span class="kw">import</span> javax.validation.constraints.*;
+<span class="cmt">// (ou jakarta.validation.constraints.*)</span>
+
+<span class="ann">@Entity</span>
+<span class="ann">@Table</span>(name = <span class="str">"tb_produto"</span>)
+<span class="kw">public class</span> <span class="cls">Produto</span> {
+    <span class="cmt">// ... id ...</span>
+
+    <span class="ann">@NotBlank</span>(message = <span class="str">"O nome é obrigatório"</span>)
+    <span class="ann">@Size</span>(min = <span class="num">3</span>, message = <span class="str">"O nome deve ter no mínimo 3 caracteres"</span>)
+    <span class="kw">private</span> <span class="typ">String</span> nome;
+
+    <span class="ann">@NotNull</span>(message = <span class="str">"O preço é obrigatório"</span>)
+    <span class="ann">@PositiveOrZero</span>(message = <span class="str">"O preço não pode ser negativo"</span>)
+    <span class="kw">private</span> <span class="typ">Double</span> preco;
+
+    <span class="cmt">// Getters e Setters...</span>
+}</div>
+      <p style="margin-top:10px">No Spring Boot 3 o pacote é <span class="ic">jakarta.validation.constraints</span>, e é preciso adicionar o starter de validação:</p>
+      <div class="code-block">&lt;<span class="cls">dependency</span>&gt;
+    &lt;<span class="cls">groupId</span>&gt;org.springframework.boot&lt;/<span class="cls">groupId</span>&gt;
+    &lt;<span class="cls">artifactId</span>&gt;spring-boot-starter-validation&lt;/<span class="cls">artifactId</span>&gt;
+&lt;/<span class="cls">dependency</span>&gt;</div>
+      <div class="output-label">Tarefa.java &mdash; nome &rarr; titulo, preço &rarr; prioridade</div>
+      <div class="code-block"><span class="kw">import</span> jakarta.validation.constraints.*;
+
+    <span class="ann">@NotBlank</span>(message = <span class="str">"O título é obrigatório"</span>)
+    <span class="ann">@Size</span>(min = <span class="num">3</span>, message = <span class="str">"O título deve ter no mínimo 3 caracteres"</span>)
+    <span class="ann">@Column</span>(nullable = <span class="kw">false</span>, length = <span class="num">100</span>)
+    <span class="kw">private</span> <span class="typ">String</span> titulo;
+
+    <span class="ann">@NotNull</span>(message = <span class="str">"A prioridade é obrigatória"</span>)
+    <span class="ann">@Enumerated</span>(<span class="typ">EnumType</span>.STRING)
+    <span class="kw">private</span> <span class="typ">Prioridade</span> prioridade = <span class="typ">Prioridade</span>.MEDIA;</div>
+      <p style="margin-top:10px">As anotações só são verificadas na chegada da requisição quando o parâmetro tem <span class="ic">@Valid</span>:</p>
+      <div class="code-block"><span class="ann">@PostMapping</span>
+<span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">criar</span>(<span class="ann">@Valid</span> <span class="ann">@RequestBody</span> <span class="cls">Tarefa</span> tarefa, <span class="ann">@RequestParam</span> <span class="typ">Long</span> usuarioId)</div>
+      <div class="output-label">POST {{baseUrl}}/tarefas?usuarioId=1 com { "titulo": "" }</div>
+      <div class="output-block"><span style="color:#f38ba8">HTTP/1.1 400 Bad Request</span>
+Content-Type: application/json
+
+{
+  "timestamp": "2026-11-19T22:15:03.512+00:00",
+  "status": 400,
+  "error": "Bad Request",
+  "path": "/api/v1/tarefas"
+}
+
+<span style="color:#fab387">// console: WARN ... DefaultHandlerExceptionResolver : Resolved [MethodArgumentNotValidException: ...
+//   with 2 errors: [... default message [O título é obrigatório]] [... default message [O título deve ter no mínimo 3 caracteres]] ]</span></div>
+      <div class="warn-block">&#x1F4A1; O Spring devolve 400 e nem chega a executar o método: nenhum SQL vai ao banco. As mensagens aparecem no console, mas o corpo padrão do Spring Boot não as mostra. Na aula 09 o ErrorResponse e o GlobalExceptionHandler devolvem as mensagens para o cliente.</div>
+    </div>
+
+    <!-- Card 13: Boas práticas -->
+    <div class="card">
+      <div class="card-title">&#x1F3C5; Boas Práticas em APIs RESTful <span class="pill pill-green">Aula 08</span> <span class="pill pill-grad">ResponseEntity</span></div>
+      <p>&#x1F539; <strong style="color:var(--text)">Use os status HTTP corretos</strong>: o status HTTP dá <strong style="color:var(--text)">semântica</strong> à resposta!</p>
+      <table>
+        <tr><th>Status</th><th>Significado</th><th>No Task Manager</th></tr>
+        <tr><td>200 OK</td><td class="left">Sucesso (padrão, bom para GET).</td><td class="left">GET e PUT</td></tr>
+        <tr><td>201 Created</td><td class="left">Recurso criado com sucesso (ideal para POST).</td><td class="left">POST</td></tr>
+        <tr><td>204 No Content</td><td class="left">Sucesso sem corpo de resposta (ideal para DELETE).</td><td class="left">DELETE</td></tr>
+        <tr><td>400 Bad Request</td><td class="left">Erro do cliente (ex.: falha na validação).</td><td class="left">título vazio, prioridade nula</td></tr>
+        <tr><td>404 Not Found</td><td class="left">Recurso não encontrado.</td><td class="left">/tarefas/99, usuarioId=99</td></tr>
+      </table>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">Implemente status com ResponseEntity</strong>: para ter controle total sobre o status e o corpo, trocamos o retorno do método para <span class="ic">ResponseEntity</span>.</p>
+      <div class="code-block">    <span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)
+    <span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+        <span class="kw">return</span> repository.<span class="mtd">findById</span>(id)
+                .<span class="mtd">map</span>(<span class="typ">ResponseEntity</span>::<span class="mtd">ok</span>)                     <span class="cmt">// 200 + tarefa</span>
+                .<span class="mtd">orElse</span>(<span class="typ">ResponseEntity</span>.<span class="mtd">notFound</span>().<span class="mtd">build</span>());  <span class="cmt">// 404 sem corpo</span>
+    }
+
+    <span class="ann">@PostMapping</span>
+    <span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">criar</span>(<span class="ann">@Valid</span> <span class="ann">@RequestBody</span> <span class="cls">Tarefa</span> tarefa,
+                                        <span class="ann">@RequestParam</span> <span class="typ">Long</span> usuarioId) {
+        <span class="cls">Usuario</span> usuario = usuarioRepository.<span class="mtd">findById</span>(usuarioId).<span class="mtd">orElse</span>(<span class="kw">null</span>);
+        <span class="kw">if</span> (usuario == <span class="kw">null</span>) {
+            <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">notFound</span>().<span class="mtd">build</span>();
+        }
+        tarefa.<span class="mtd">setUsuario</span>(usuario);
+        <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">status</span>(<span class="typ">HttpStatus</span>.CREATED).<span class="mtd">body</span>(repository.<span class="mtd">save</span>(tarefa));
+    }
+
+    <span class="ann">@DeleteMapping</span>(<span class="str">"/{id}"</span>)
+    <span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="typ">Void</span>&gt; <span class="mtd">remover</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+        <span class="kw">if</span> (repository.<span class="mtd">findById</span>(id).<span class="mtd">isEmpty</span>()) {
+            <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">notFound</span>().<span class="mtd">build</span>();
+        }
+        repository.<span class="mtd">deleteById</span>(id);
+        <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">noContent</span>().<span class="mtd">build</span>();   <span class="cmt">// 204</span>
+    }</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">Sempre versione sua API</strong>: o <span class="ic">/v1</span> em <span class="ic">/api/v1/tarefas</span> permite lançar uma <span class="ic">/api/v2</span> com mudanças incompatíveis sem quebrar quem já usa a v1.</p>
+      <div class="warn-block">&#x1F4CC; O 201 do POST ainda sai sem o cabeçalho Location (o endereço da tarefa criada). Rotas RESTful, PATCH e o Location chegam na aula 12.</div>
+    </div>
+
+  </div><!-- /resumo1 -->
+
+  <!-- ═══ SIMULADOR ═══ -->
+  <div id="simulador1" class="section">
+
+    <!-- Part 1: CRUD no Postman -->
+    <div class="card">
+      <div class="card-title">&#x1F4EE; CRUD de Tarefas no Postman <span class="pill pill-grad">/api/v1/tarefas</span></div>
+      <p style="margin-bottom:4px">A API acabou de subir com a carga inicial (3 usuários e 8 tarefas). Escolha uma requisição da coleção e veja o que o Postman recebe e o que o Hibernate executa no PostgreSQL:</p>
+      <div class="type-btns" id="crudOps">
+        <button class="type-btn active" onclick="runCrud('listar',this)">GET lista</button>
+        <button class="type-btn" onclick="runCrud('buscar',this)">GET /1</button>
+        <button class="type-btn" onclick="runCrud('naoExiste',this)">GET /99</button>
+        <button class="type-btn" onclick="runCrud('criar',this)">POST</button>
+        <button class="type-btn" onclick="runCrud('invalido',this)">POST inválido</button>
+        <button class="type-btn" onclick="runCrud('atualizar',this)">PUT /5</button>
+        <button class="type-btn" onclick="runCrud('remover',this)">DELETE /8</button>
+      </div>
+      <div class="output-label">Requisição (Postman)</div>
+      <div class="code-block" id="crudReq" style="min-height:50px"></div>
+      <div class="output-label">Resposta</div>
+      <div class="output-block" id="crudResp"></div>
+      <div class="output-label">Console do Spring Boot (show-sql + format_sql)</div>
+      <div class="output-block" id="crudSql"></div>
+      <div class="warn-block" id="crudDesc"></div>
+    </div>
+
+    <!-- Part 2: SOAP x REST -->
+    <div class="card">
+      <div class="card-title">&#x2696; SOAP &times; REST: a Mesma Consulta <span class="pill pill-blue">Protocolo &times; Estilo</span></div>
+      <p style="margin-bottom:4px">Buscar a tarefa 1 em um serviço SOAP e na API REST do Task Manager. Compare o tamanho da requisição, o formato e onde fica a "ação":</p>
+      <div class="type-btns" id="soapOps">
+        <button class="type-btn active" onclick="runSoap('soap',this)">SOAP (XML + WSDL)</button>
+        <button class="type-btn" onclick="runSoap('rest',this)">REST (HTTP + JSON)</button>
+      </div>
+      <div class="output-label">Requisição</div>
+      <div class="code-block" id="soapReq" style="min-height:50px"></div>
+      <div class="output-label">Resposta</div>
+      <div class="output-block" id="soapResp"></div>
+      <div class="warn-block" id="soapDesc"></div>
+    </div>
+
+    <!-- Part 3: Garçom -->
+    <div class="card">
+      <div class="card-title">&#x1F37D; O Garçom em Ação: GET /api/v1/tarefas/1 <span class="pill pill-amber">Requisição &rarr; Resposta</span></div>
+      <p style="margin-bottom:4px">Acompanhe o pedido do cliente passando pelo "garçom" (API) até a "cozinha" (servidor e banco) e voltando como prato (resposta):</p>
+      <div class="stepper">
+        <button class="step-btn active" onclick="setGarcomStep(0,this)">1. Postman</button>
+        <button class="step-btn" onclick="setGarcomStep(1,this)">2. Tomcat</button>
+        <button class="step-btn" onclick="setGarcomStep(2,this)">3. Dispatcher</button>
+        <button class="step-btn" onclick="setGarcomStep(3,this)">4. Controller</button>
+        <button class="step-btn" onclick="setGarcomStep(4,this)">5. Repository</button>
+        <button class="step-btn" onclick="setGarcomStep(5,this)">6. Jackson</button>
+        <button class="step-btn" onclick="setGarcomStep(6,this)">7. Resposta</button>
+      </div>
+      <div class="code-block" id="garcomCode" style="min-height:50px"></div>
+      <div class="warn-block" id="garcomDesc"></div>
+    </div>
+
+  </div><!-- /simulador1 -->
+
+  <!-- ═══ EXERCÍCIOS ═══ -->
+  <div id="exercicios1" class="section">
+
+    <div class="score-bar-area">
+      <div>
+        <div class="score-val"><span id="scoreVal1">0</span>/5</div>
+        <div class="score-label">acertos</div>
+      </div>
+      <div style="flex:1">
+        <div class="score-track"><div class="score-fill" id="scoreBar1"></div></div>
+      </div>
+    </div>
+
+    <!-- Ex 1 -->
+    <div class="ex-block" id="ex1-0">
+      <div class="ex-q">Questão 1 &mdash; REST é um <strong>protocolo</strong> com contrato rígido (WSDL), enquanto SOAP é um <strong>estilo de arquitetura</strong> que usa o HTTP.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(0,this,false)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(0,this,true)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-0"></div>
+    </div>
+
+    <!-- Ex 2 -->
+    <div class="ex-block" id="ex1-1">
+      <div class="ex-q">Questão 2 &mdash; Em <code class="ic">/api/v1/tarefas/1</code>, a URI nomeia e endereça um recurso: a tarefa de id 1.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(1,this,true)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(1,this,false)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-1"></div>
+    </div>
+
+    <!-- Ex 3 -->
+    <div class="ex-block" id="ex1-2">
+      <div class="ex-q">Questão 3 &mdash; <code class="ic">PUT /api/v1/tarefas/5</code> substitui totalmente a tarefa 5 pelos dados enviados no corpo.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(2,this,true)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(2,this,false)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-2"></div>
+    </div>
+
+    <!-- Ex 4 -->
+    <div class="ex-block" id="ex1-3">
+      <div class="ex-q">Questão 4 &mdash; A anotação <code class="ic">@RequestBody</code> extrai um valor da URI, como o <code class="ic">id</code> em <code class="ic">/tarefas/{id}</code>.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(3,this,false)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(3,this,true)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-3"></div>
+    </div>
+
+    <!-- Ex 5 -->
+    <div class="ex-block" id="ex1-4">
+      <div class="ex-q">Questão 5 &mdash; <code class="ic">204 No Content</code> é o status ideal para um DELETE bem-sucedido, pois não há corpo na resposta.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(4,this,true)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(4,this,false)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-4"></div>
+    </div>
+
+  </div><!-- /exercicios1 -->
+
+  <!-- ═══ QUESTIONÁRIOS ═══ -->
+  <div id="questionarios1" class="section">
+
+    <div class="card">
+      <div class="card-title">&#x1F4DD; Questionários</div>
+      <p style="margin-bottom:1rem">Teste seu conhecimento com os questionários abaixo. Cada arquivo contém questões de verdadeiro ou falso e exercícios práticos de implementação.</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <a class="grad-btn" href="questionario-a04-01.html">&#x1F4CB; Quiz 01 &mdash; Web Services, REST, URIs e JSON</a>
+        <a class="grad-btn" href="questionario-a04-02.html" style="background:linear-gradient(270deg,#00c896 0%,#00a0cc 100%)">&#x1F4CB; Quiz 02 &mdash; CRUD com Spring Web, Validação e Status HTTP</a>
+        <a class="grad-btn" href="questionario-a04-03.html" style="background:linear-gradient(270deg,#cba6f7 0%,#8d62ff 100%)">&#x1F6E0; Implementação &mdash; TarefaController do GET ao @Valid</a>
+      </div>
+    </div>
+
+  </div><!-- /questionarios1 -->
+
+  <!-- ═══ CURIOSIDADES ═══ -->
+  <div id="curiosidades1" class="section">
+
+    <div class="card">
+      <div class="card-title">&#x1F680; Curiosidades sobre Web Services, REST e HTTP</div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F393;</div>
+        <div>
+          <div class="curi-title">REST nasceu em uma tese de doutorado</div>
+          <div class="curi-body">O termo <strong>REST</strong> foi definido por <strong>Roy Fielding</strong> em 2000, no capítulo 5 da sua tese de doutorado na Universidade da Califórnia em Irvine: <em>"Architectural Styles and the Design of Network-based Software Architectures"</em>.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F4DC;</div>
+        <div>
+          <div class="curi-title">O autor do REST ajudou a escrever o HTTP</div>
+          <div class="curi-body">Fielding também é um dos autores da especificação do <strong>HTTP/1.1</strong> (RFC 2616, de 1999). Por isso o REST "encaixa" tão bem nos verbos e nos códigos de status do HTTP.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F9FC;</div>
+        <div>
+          <div class="curi-title">SOAP deixou de ser sigla</div>
+          <div class="curi-body">SOAP significava <em>Simple Object Access Protocol</em>, mas a especificação <strong>SOAP 1.2</strong> do W3C (2003) diz que o nome não é mais um acrônimo. O protocolo em si não tem nada de "simples" nem de "objeto".</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F4E6;</div>
+        <div>
+          <div class="curi-title">JSON não foi inventado, foi "descoberto"</div>
+          <div class="curi-body"><strong>Douglas Crockford</strong>, que popularizou o JSON no início dos anos 2000, costuma dizer que o descobriu: ele é um subconjunto da sintaxe de objetos do JavaScript. Hoje é padronizado pela <code>RFC 8259</code> e pela <code>ECMA-404</code>.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1FAD6;</div>
+        <div>
+          <div class="curi-title">418 I'm a teapot</div>
+          <div class="curi-body">O status <code>418</code> vem da <strong>RFC 2324</strong>, uma brincadeira de 1º de abril de 1998 que especifica um protocolo para controlar cafeteiras (HTCPCP). Um bule de chá que recebe um pedido de café responde "Eu sou um bule".</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F4EE;</div>
+        <div>
+          <div class="curi-title">O Postman começou como projeto paralelo</div>
+          <div class="curi-body">O Postman foi criado em 2012 por <strong>Abhinav Asthana</strong> como um projeto paralelo, distribuído como aplicativo do Chrome, para facilitar o teste de APIs. Depois virou aplicativo próprio para desktop e web.</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- /curiosidades1 -->
+
+  <!-- ═══ LINKS ═══ -->
+  <div id="links1" class="section">
+
+    <div class="card">
+      <div class="card-title">&#x1F517; Links Úteis</div>
+
+      <div style="display:flex;flex-direction:column;gap:14px;margin-top:4px">
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x23EA; Assunto Anterior</div>
+          <a class="link-item" href="../assunto03/index.html">Assunto 03 &mdash; Consultas com JPQL e Criteria API</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x23E9; Próximo Assunto</div>
+          <a class="link-item" href="../index.html#assunto05">Assunto 05 &mdash; Manipulação de Erros e Respostas Personalizadas e Integração com Banco de Dados e DTOs (disponível em 24/11)</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F6E0; Task Manager API &mdash; Repositório da Turma</div>
+          <a class="link-item" href="https://github.com/irede-java-c2/taskmanager-api" target="_blank">https://github.com/irede-java-c2/taskmanager-api</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F3F7; Código das Aulas</div>
+          <span class="link-item" style="color:var(--muted)">aula-07 &mdash; TarefaController com GET e coleção do Postman (disponível após a aula)</span><br/>
+          <span class="link-item" style="color:var(--muted)">aula-08 &mdash; POST, PUT e DELETE de tarefas com validação (disponível após a aula)</span>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4CE; Citado no Slide &mdash; Entenda o que são Web Services (C2TI)</div>
+          <a class="link-item" href="https://c2ti.com.br/blog/entenda-o-que-sao-web-services-e-como-eles-podem-reduzir-os-custos-do-seu-site" target="_blank">https://c2ti.com.br/blog/entenda-o-que-sao-web-services-e-como-eles-podem-reduzir-os-custos-do-seu-site</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F343; Spring Framework &mdash; Annotated Controllers (Spring MVC)</div>
+          <a class="link-item" href="https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller.html" target="_blank">https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller.html</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F343; Spring Boot &mdash; Servlet Web Applications</div>
+          <a class="link-item" href="https://docs.spring.io/spring-boot/reference/web/servlet.html" target="_blank">https://docs.spring.io/spring-boot/reference/web/servlet.html</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F343; Spring Boot &mdash; Validation</div>
+          <a class="link-item" href="https://docs.spring.io/spring-boot/reference/io/validation.html" target="_blank">https://docs.spring.io/spring-boot/reference/io/validation.html</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4DC; Jakarta Bean Validation 3.0 &mdash; Especificação</div>
+          <a class="link-item" href="https://jakarta.ee/specifications/bean-validation/3.0/" target="_blank">https://jakarta.ee/specifications/bean-validation/3.0/</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4DC; RFC 9110 &mdash; HTTP Semantics (métodos e status)</div>
+          <a class="link-item" href="https://www.rfc-editor.org/rfc/rfc9110" target="_blank">https://www.rfc-editor.org/rfc/rfc9110</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4D8; MDN &mdash; Códigos de Status HTTP (em português)</div>
+          <a class="link-item" href="https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status" target="_blank">https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F393; Roy Fielding &mdash; Tese que definiu o REST (cap. 5)</div>
+          <a class="link-item" href="https://ics.uci.edu/~fielding/pubs/dissertation/top.htm" target="_blank">https://ics.uci.edu/~fielding/pubs/dissertation/top.htm</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4E6; JSON &mdash; Introdução (json.org)</div>
+          <a class="link-item" href="https://www.json.org/json-pt.html" target="_blank">https://www.json.org/json-pt.html</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4EE; Postman &mdash; Documentação</div>
+          <a class="link-item" href="https://learning.postman.com/docs/" target="_blank">https://learning.postman.com/docs/</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F9EA; Baeldung &mdash; Spring @RequestBody/@ResponseBody e Validação</div>
+          <a class="link-item" href="https://www.baeldung.com/spring-request-response-body" target="_blank">https://www.baeldung.com/spring-request-response-body</a><br/>
+          <a class="link-item" href="https://www.baeldung.com/spring-boot-bean-validation" target="_blank">https://www.baeldung.com/spring-boot-bean-validation</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">&#x1F468;&#x200D;&#x1F3EB; Instrutor das Aulas 07 e 08</div>
+          <a href="https://github.com/davsilvam" target="_blank" style="display:inline-flex;align-items:center;gap:12px;padding:10px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);text-decoration:none">
+            <img src="https://avatars.githubusercontent.com/u/101468533?v=4" alt="David Silva" width="44" height="44" style="border-radius:50%;border:2px solid rgba(141,98,255,.35)"/>
+            <span>
+              <span style="display:block;font-size:14px;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace">David Silva</span>
+              <span style="display:block;font-size:12px;color:var(--accent);font-family:'JetBrains Mono',monospace">github.com/davsilvam</span>
+            </span>
+          </a>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /links1 -->
+
+  </div><!-- /aula01 -->
+
+</div><!-- /wrap -->
+
+<footer>
+  Capacita Brasil &mdash; <span>iRede</span> &mdash; Material Interativo de Java
+</footer>
+
+<script>
+function showTab(t, btn) {
+  document.querySelectorAll('#aula01 .section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('#aula01 .tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(t).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── Utilitários: SQL no formato do Hibernate (show-sql + format_sql) ── */
+function sql(cols, clauses) {
+  let s = 'Hibernate: \n    select\n' + cols.map((c, i) => '        ' + c + (i < cols.length - 1 ? ',' : ' ')).join('\n');
+  clauses.forEach(c => { s += '\n    ' + c[0] + '\n' + c.slice(1).join('\n'); });
+  return s;
+}
+const OUT = s => '<span style="color:#cdd6f4">' + s + '</span>';
+const ERR = s => '<span style="color:#f38ba8">' + s + '</span>';
+const WRN = s => '<span style="color:#fab387">' + s + '</span>';
+const INF = s => '<span style="color:#89dceb">' + s + '</span>';
+const CMT = s => '<span style="color:#6c7086">' + s + '</span>';
+const COLS_T = ['t1_0.id', 't1_0.concluida', 't1_0.descricao', 't1_0.prazo', 't1_0.prioridade', 't1_0.titulo', 't1_0.usuario_id'];
+const COLS_U = ['u1_0.id', 'u1_0.email', 'u1_0.nome', 'u1_0.senha'];
+const SQL_TAREFAS = sql(COLS_T, [['from', '        tarefas t1_0']]);
+const SQL_TAREFA_ID = sql(COLS_T, [['from', '        tarefas t1_0 '], ['where', '        t1_0.id=?']]);
+const SQL_USUARIO_ID = sql(COLS_U, [['from', '        usuarios u1_0 '], ['where', '        u1_0.id=?']]);
+const SQL_ETIQUETAS = sql(['e1_0.id_tarefa', 'e1_1.id', 'e1_1.nome'], [
+  ['from', '        tarefa_etiqueta e1_0 '],
+  ['join', '        etiquetas e1_1 ', '            on e1_1.id=e1_0.id_etiqueta '],
+  ['where', '        e1_0.id_tarefa=?']
+]);
+const SQL_INSERT = `Hibernate:
+    insert
+    into
+        tarefas
+        (concluida, descricao, prazo, prioridade, titulo, usuario_id)
+    values
+        (?, ?, ?, ?, ?, ?)
+    returning id`;
+const SQL_UPDATE = `Hibernate:
+    update
+        tarefas
+    set
+        concluida=?,
+        descricao=?,
+        prazo=?,
+        prioridade=?,
+        titulo=?,
+        usuario_id=?
+    where
+        id=?`;
+const SQL_DELETE = `Hibernate:
+    delete
+    from
+        tarefa_etiqueta
+    where
+        id_tarefa=?
+Hibernate:
+    delete
+    from
+        tarefas
+    where
+        id=?`;
+const HEAD = (status, data, json) => (status.startsWith('2') ? '<span style="color:#a6e3a1">' : '<span style="color:#f38ba8">') + 'HTTP/1.1 ' + status + '</span>\n'
+  + (json ? 'Content-Type: application/json\n' : '') + 'Date: ' + data + ' GMT\n';
+const DIA07 = 'Tue, 17 Nov 2026 22:10:05';
+const DIA08 = 'Thu, 19 Nov 2026 22:14:41';
+
+const JSON_T1 = `{
+  "id": 1,
+  "titulo": "Estudar JPA",
+  "descricao": "Revisar @Entity e @Id",
+  "concluida": false,
+  "prazo": "2026-11-05",
+  "prioridade": "ALTA",
+  "etiquetas": [ { "id": 1, "nome": "Estudo" }, { "id": 3, "nome": "Urgente" } ]
+}`;
+
+/* ── Simulador 1: CRUD no Postman ── */
+const CRUD_OPS = {
+  listar: {
+    req: `<span class="kw">GET</span> {{baseUrl}}/tarefas`,
+    resp: HEAD('200 OK', DIA07, true) + `
+[
+  {
+    "id": 1,
+    "titulo": "Estudar JPA",
+    "descricao": "Revisar @Entity e @Id",
+    "concluida": false,
+    "prazo": "2026-11-05",
+    "prioridade": "ALTA",
+    "etiquetas": [ { "id": 1, "nome": "Estudo" }, { "id": 3, "nome": "Urgente" } ]
+  },
+  {
+    "id": 2,
+    "titulo": "Escrever consultas JPQL",
+    "descricao": "Criar as @Query do TarefaRepository",
+    "concluida": false,
+    "prazo": "2026-11-12",
+    "prioridade": "ALTA",
+    "etiquetas": [ { "id": 1, "nome": "Estudo" } ]
+  },
+  ${CMT('... mais 6 tarefas (ids 3 a 8)')}
+]`,
+    sql: `${SQL_TAREFAS}
+${SQL_ETIQUETAS}
+${CMT('... o mesmo SELECT em tarefa_etiqueta se repete para cada uma das 8 tarefas')}`,
+    desc: '&#x1F539; @GetMapping sem caminho responde em /api/v1/tarefas. O controller devolve a List&lt;Tarefa&gt; do findAll() e o Jackson a converte em um array JSON com status 200. As etiquetas são LAZY: o Jackson as carrega uma a uma enquanto escreve o JSON, o N+1 que você viu na Fase 1 (o Spring mantém a sessão aberta durante a requisição: open-in-view).'
+  },
+  buscar: {
+    req: `<span class="kw">GET</span> {{baseUrl}}/tarefas/1`,
+    resp: HEAD('200 OK', DIA07, true) + '\n' + JSON_T1,
+    sql: `${SQL_TAREFA_ID}
+${SQL_ETIQUETAS}`,
+    desc: '&#x1F539; O {id} da rota @GetMapping("/{id}") chega no parâmetro @PathVariable Long id = 1. O findById() traz a tarefa e o ResponseEntity.ok(...) devolve 200 com o JSON. Repare que não há "usuario" no JSON: o @JsonIgnore esconde o proxy LAZY e a senha do dono.'
+  },
+  naoExiste: {
+    req: `<span class="kw">GET</span> {{baseUrl}}/tarefas/99`,
+    resp: HEAD('404 Not Found', DIA07, false) + CMT('\n(sem corpo)') + `
+
+${CMT('// Antes do ResponseEntity (versão da aula 07, orElse(null)):')}
+${CMT('// HTTP/1.1 200 OK  com corpo vazio, o cliente acha que deu certo!')}`,
+    sql: SQL_TAREFA_ID,
+    desc: '&#x1F539; findById(99) devolve um Optional vazio. Com .orElse(ResponseEntity.notFound().build()) a resposta é 404 Not Found, o status que o slide indica para "recurso não encontrado". É por isso que a aula 08 troca o retorno do método para ResponseEntity.'
+  },
+  criar: {
+    req: `<span class="kw">POST</span> {{baseUrl}}/tarefas?usuarioId=1
+Content-Type: application/json
+
+{
+  <span class="mtd">"titulo"</span>: <span class="str">"Testar a API no Postman"</span>,
+  <span class="mtd">"descricao"</span>: <span class="str">"Criar a requisição POST da coleção"</span>,
+  <span class="mtd">"prazo"</span>: <span class="str">"2026-11-19"</span>,
+  <span class="mtd">"prioridade"</span>: <span class="str">"ALTA"</span>
+}`,
+    resp: HEAD('201 Created', DIA08, true) + `
+{
+  "id": 9,
+  "titulo": "Testar a API no Postman",
+  "descricao": "Criar a requisição POST da coleção",
+  "concluida": false,
+  "prazo": "2026-11-19",
+  "prioridade": "ALTA",
+  "etiquetas": [ ]
+}`,
+    sql: `${SQL_USUARIO_ID}
+${SQL_INSERT}`,
+    desc: '&#x1F539; @RequestBody converte o JSON do corpo em um objeto Tarefa (campos ausentes ficam com o valor padrão: concluida = false). O usuarioId vem da URI por @RequestParam, o controller busca a Ana e liga a tarefa a ela. save() gera o INSERT e o PostgreSQL devolve o id 9. ResponseEntity.status(HttpStatus.CREATED) responde 201, o ideal para POST.'
+  },
+  invalido: {
+    req: `<span class="kw">POST</span> {{baseUrl}}/tarefas?usuarioId=1
+Content-Type: application/json
+
+{
+  <span class="mtd">"titulo"</span>: <span class="str">""</span>,
+  <span class="mtd">"descricao"</span>: <span class="str">"Esqueci o título"</span>
+}`,
+    resp: HEAD('400 Bad Request', DIA08, true) + `
+{
+  "timestamp": "2026-11-19T22:15:03.512+00:00",
+  "status": 400,
+  "error": "Bad Request",
+  "path": "/api/v1/tarefas"
+}`,
+    sql: WRN(`WARN 21408 --- [taskmanager-api] [nio-8080-exec-3] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public org.springframework.http.ResponseEntity&lt;br.org.irede.taskmanagerapi.model.Tarefa&gt; br.org.irede.taskmanagerapi.controller.TarefaController.criar(br.org.irede.taskmanagerapi.model.Tarefa,java.lang.Long) with 2 errors: [Field error in object 'tarefa' on field 'titulo': rejected value []; ... default message [O título é obrigatório]] [Field error in object 'tarefa' on field 'titulo': rejected value []; ... default message [O título deve ter no mínimo 3 caracteres]] ]`) + '\n' + CMT('(nenhum SQL: o método criar() nem chegou a ser executado)'),
+    desc: '&#x1F539; "Nunca confie na entrada do usuário": com @Valid no parâmetro, o Spring roda as anotações @NotBlank e @Size da entidade ANTES de chamar o método. Título vazio quebra as duas regras, e a resposta é 400 Bad Request sem tocar no banco. As mensagens ficam no console; levá-las ao cliente é tema da aula 09.'
+  },
+  atualizar: {
+    req: `<span class="kw">PUT</span> {{baseUrl}}/tarefas/5
+Content-Type: application/json
+
+{
+  <span class="mtd">"titulo"</span>: <span class="str">"Montar coleção do Postman"</span>,
+  <span class="mtd">"descricao"</span>: <span class="str">"Requisições GET, POST, PUT e DELETE"</span>,
+  <span class="mtd">"concluida"</span>: <span class="kw">true</span>,
+  <span class="mtd">"prazo"</span>: <span class="str">"2026-11-19"</span>,
+  <span class="mtd">"prioridade"</span>: <span class="str">"MEDIA"</span>
+}`,
+    resp: HEAD('200 OK', DIA08, true) + `
+{
+  "id": 5,
+  "titulo": "Montar coleção do Postman",
+  "descricao": "Requisições GET, POST, PUT e DELETE",
+  "concluida": true,
+  "prazo": "2026-11-19",
+  "prioridade": "MEDIA",
+  "etiquetas": [ { "id": 2, "nome": "Trabalho" } ]
+}`,
+    sql: `${SQL_TAREFA_ID}
+${SQL_UPDATE}
+${SQL_ETIQUETAS}`,
+    desc: '&#x1F539; PUT substitui totalmente a tarefa 5: o controller busca a tarefa, copia TODOS os campos do corpo e chama save(). Antes ela era BAIXA, sem prazo e não concluída. Se o corpo omitisse "prazo", o prazo viraria null: é isso que "substituir totalmente" significa. Atualizar só alguns campos é papel do PATCH (aula 12).'
+  },
+  remover: {
+    req: `<span class="kw">DELETE</span> {{baseUrl}}/tarefas/8`,
+    resp: HEAD('204 No Content', DIA08, false) + CMT('\n(sem corpo)'),
+    sql: `${SQL_TAREFA_ID}
+${SQL_DELETE}`,
+    desc: '&#x1F539; O controller confere se a tarefa existe (se não, 404) e chama deleteById(). Como Tarefa é o lado dono do N:N com Etiqueta, o Hibernate apaga primeiro as linhas da tarefa_etiqueta e depois a tarefa. A resposta é 204 No Content: sucesso, sem corpo, o ideal para DELETE.'
+  }
+};
+
+function runCrud(op, btn) {
+  document.querySelectorAll('#crudOps .type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const data = CRUD_OPS[op];
+  document.getElementById('crudReq').innerHTML = data.req;
+  document.getElementById('crudResp').innerHTML = data.resp;
+  document.getElementById('crudSql').innerHTML = data.sql;
+  document.getElementById('crudDesc').innerHTML = data.desc;
+}
+
+/* ── Simulador 2: SOAP x REST ── */
+const SOAP_OPS = {
+  soap: {
+    req: `<span class="kw">POST</span> /ws/tarefas HTTP/1.1
+Content-Type: text/xml; charset=utf-8
+SOAPAction: <span class="str">"getTarefa"</span>
+
+&lt;<span class="cls">soap:Envelope</span> <span class="mtd">xmlns:soap</span>=<span class="str">"http://schemas.xmlsoap.org/soap/envelope/"</span>
+               <span class="mtd">xmlns:tm</span>=<span class="str">"http://irede.org.br/taskmanager"</span>&gt;
+  &lt;<span class="cls">soap:Header</span>/&gt;
+  &lt;<span class="cls">soap:Body</span>&gt;
+    &lt;<span class="cls">tm:getTarefa</span>&gt;
+      &lt;<span class="cls">tm:id</span>&gt;1&lt;/<span class="cls">tm:id</span>&gt;
+    &lt;/<span class="cls">tm:getTarefa</span>&gt;
+  &lt;/<span class="cls">soap:Body</span>&gt;
+&lt;/<span class="cls">soap:Envelope</span>&gt;`,
+    resp: `<span style="color:#a6e3a1">HTTP/1.1 200 OK</span>
+Content-Type: text/xml; charset=utf-8
+
+&lt;soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+               xmlns:tm="http://irede.org.br/taskmanager"&gt;
+  &lt;soap:Body&gt;
+    &lt;tm:getTarefaResponse&gt;
+      &lt;tm:tarefa&gt;
+        &lt;tm:id&gt;1&lt;/tm:id&gt;
+        &lt;tm:titulo&gt;Estudar JPA&lt;/tm:titulo&gt;
+        &lt;tm:concluida&gt;false&lt;/tm:concluida&gt;
+        &lt;tm:prazo&gt;2026-11-05&lt;/tm:prazo&gt;
+        &lt;tm:prioridade&gt;ALTA&lt;/tm:prioridade&gt;
+      &lt;/tm:tarefa&gt;
+    &lt;/tm:getTarefaResponse&gt;
+  &lt;/soap:Body&gt;
+&lt;/soap:Envelope&gt;`,
+    desc: '&#x1F539; SOAP é um PROTOCOLO com foco em AÇÕES: a operação getTarefa vai dentro do envelope XML, sempre por POST no mesmo endereço. O formato é XML sempre, e o contrato é rígido: um arquivo WSDL descreve cada operação e cada tipo. Repare no tamanho: "heavyweight", pesado e verboso. Ilustração: o Task Manager não tem endpoint SOAP.'
+  },
+  rest: {
+    req: `<span class="kw">GET</span> /api/v1/tarefas/1 HTTP/1.1
+Accept: application/json`,
+    resp: HEAD('200 OK', DIA07, true) + '\n' + JSON_T1,
+    desc: '&#x1F539; REST é um ESTILO DE ARQUITETURA com foco em RECURSOS: a URI diz QUAL recurso (/tarefas/1) e o verbo HTTP diz O QUE fazer (GET = ler). Não há envelope nem WSDL: o contrato é o próprio HTTP (verbos, URIs e status). O JSON é o formato comum. "Lightweight": leve e simples.'
+  }
+};
+
+function runSoap(op, btn) {
+  document.querySelectorAll('#soapOps .type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const data = SOAP_OPS[op];
+  document.getElementById('soapReq').innerHTML = data.req;
+  document.getElementById('soapResp').innerHTML = data.resp;
+  document.getElementById('soapDesc').innerHTML = data.desc;
+}
+
+/* ── Simulador 3: O garçom em ação ── */
+const GARCOM_STEPS = [
+  {
+    code: `<span class="cmt">// O cliente faz o pedido (requisição)</span>
+<span class="kw">GET</span> http://localhost:8080/api/v1/tarefas/1
+Host: localhost:8080
+Accept: */*`,
+    desc: '&#x1F539; Etapa 1 — Cliente: o Postman (poderia ser um app mobile, um site em React ou um script Python) monta a requisição HTTP: verbo GET, URI do recurso e cabeçalhos. Ele não sabe nada de Java, JPA ou PostgreSQL: só fala HTTP. Isso é a interoperabilidade.'
+  },
+  {
+    code: `<span class="cmt">// console, ao subir a aplicação</span>
+<span class="typ">INFO</span> o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+<span class="typ">INFO</span> o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+<span class="typ">INFO</span> b.o.i.t.TaskmanagerApiApplication        : Started TaskmanagerApiApplication in 4.127 seconds
+
+<span class="cmt">// a requisição chega na porta 8080 e ganha uma thread: http-nio-8080-exec-1</span>`,
+    desc: '&#x1F539; Etapa 2 — Tomcat: o spring-boot-starter-web traz um servidor Tomcat embutido. Ele escuta a porta 8080, recebe os bytes da requisição e a entrega para o Spring em uma thread própria. Sem o starter web (como na v0.1.0), a aplicação roda o CommandLineRunner e encerra.'
+  },
+  {
+    code: `<span class="cmt">// console, na primeira requisição</span>
+<span class="typ">INFO</span> o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+<span class="typ">INFO</span> o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+
+<span class="cmt">// tabela de rotas montada a partir das anotações</span>
+<span class="kw">GET</span>    /api/v1/tarefas        → <span class="cls">TarefaController</span>#<span class="mtd">listar</span>()
+<span class="kw">GET</span>    /api/v1/tarefas/{id}   → <span class="cls">TarefaController</span>#<span class="mtd">buscarPorId</span>(<span class="typ">Long</span>)   <span class="str">✓</span>
+<span class="kw">POST</span>   /api/v1/tarefas        → <span class="cls">TarefaController</span>#<span class="mtd">criar</span>(<span class="cls">Tarefa</span>, <span class="typ">Long</span>)
+<span class="kw">PUT</span>    /api/v1/tarefas/{id}   → <span class="cls">TarefaController</span>#<span class="mtd">atualizar</span>(<span class="typ">Long</span>, <span class="cls">Tarefa</span>)
+<span class="kw">DELETE</span> /api/v1/tarefas/{id}   → <span class="cls">TarefaController</span>#<span class="mtd">remover</span>(<span class="typ">Long</span>)`,
+    desc: '&#x1F539; Etapa 3 — DispatcherServlet: é o "garçom-chefe" do Spring MVC. Ele combina o verbo com a URI (@RequestMapping da classe + @GetMapping do método) e escolhe qual método do controller atende o pedido. Se nenhuma rota casar, a resposta é 404; se a rota existir com outro verbo, 405 Method Not Allowed.'
+  },
+  {
+    code: `<span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)
+<span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {   <span class="cmt">// id = 1</span>
+    <span class="kw">return</span> repository.<span class="mtd">findById</span>(id)
+            .<span class="mtd">map</span>(<span class="typ">ResponseEntity</span>::<span class="mtd">ok</span>)
+            .<span class="mtd">orElse</span>(<span class="typ">ResponseEntity</span>.<span class="mtd">notFound</span>().<span class="mtd">build</span>());
+}`,
+    desc: '&#x1F539; Etapa 4 — Controller: o "1" do final da URI é convertido para Long e entregue no parâmetro @PathVariable. O controller não conhece SQL: ele pede a tarefa ao repositório, que foi injetado pelo construtor.'
+  },
+  {
+    code: SQL_TAREFA_ID,
+    desc: '&#x1F539; Etapa 5 — Repository e banco (a "cozinha"): o findById() do JpaRepository vira um SELECT pelo id no PostgreSQL. O Hibernate monta o objeto Tarefa a partir da linha, exatamente como na Fase 1.'
+  },
+  {
+    code: `<span class="cmt">// Jackson: objeto Tarefa → texto JSON</span>
+id         → <span class="str">"id": 1</span>
+titulo     → <span class="str">"titulo": "Estudar JPA"</span>
+prazo      → <span class="str">"prazo": "2026-11-05"</span>          <span class="cmt">// LocalDate em formato ISO</span>
+prioridade → <span class="str">"prioridade": "ALTA"</span>          <span class="cmt">// nome da constante do enum</span>
+usuario    → <span class="cmt">(ignorado: @JsonIgnore)</span>
+etiquetas  → <span class="cmt">coleção LAZY, carregada agora:</span>
+${SQL_ETIQUETAS.replace(/\n/g, '\n')}`,
+    desc: '&#x1F539; Etapa 6 — Jackson: o objeto devolvido pelo controller é convertido em JSON pelo Jackson (vem com o starter web). Os getters viram campos do JSON. Ao tocar em getEtiquetas(), o Hibernate faz o SELECT das etiquetas: o Spring Boot deixa a sessão aberta até o fim da requisição (open-in-view, ligado por padrão, com um WARN no console ao subir).'
+  },
+  {
+    code: `<span class="cmt">// O prato chega à mesa (resposta)</span>
+HTTP/1.1 <span class="num">200</span> OK
+Content-Type: application/json
+
+${JSON_T1}`,
+    desc: '&#x1F539; Etapa 7 — Resposta: o status 200 e o corpo em JSON voltam pelo mesmo caminho até o Postman. Pedido feito, prato servido. Se a tarefa não existisse, o "garçom" voltaria com 404 Not Found.'
+  }
+];
+
+function setGarcomStep(i, btn) {
+  document.querySelectorAll('#simulador1 .stepper .step-btn').forEach((b, idx) => {
+    b.classList.remove('active');
+    if (idx < i) b.classList.add('past'); else b.classList.remove('past');
+  });
+  btn.classList.add('active');
+  document.getElementById('garcomCode').innerHTML = GARCOM_STEPS[i].code;
+  document.getElementById('garcomDesc').innerHTML = GARCOM_STEPS[i].desc;
+}
+
+function answer1(i, btn, isCorrect) {
+  const block = document.getElementById('ex1-' + i);
+  const fb = document.getElementById('fb1-' + i);
+  block.querySelectorAll('.choice').forEach(b => b.disabled = true);
+  if (isCorrect) {
+    btn.classList.add('correct');
+    block.classList.add('done');
+    fb.className = 'feedback show ok';
+    fb.textContent = '✓ Correto!';
+    window.score1 = (window.score1 || 0) + 1;
+  } else {
+    btn.classList.add('wrong');
+    fb.className = 'feedback show ko';
+    fb.textContent = '✗ Incorreto. Revise o resumo desta aula.';
+  }
+  document.getElementById('scoreVal1').textContent = window.score1 || 0;
+  document.getElementById('scoreBar1').style.width = ((window.score1 || 0) / 5 * 100) + '%';
+}
+</script>
+
+<script>
+window.addEventListener('DOMContentLoaded', function () {
+  runCrud('listar', document.querySelector('#crudOps .type-btn.active'));
+  runSoap('soap', document.querySelector('#soapOps .type-btn.active'));
+  setGarcomStep(0, document.querySelector('#simulador1 .step-btn.active'));
+});
+</script>
+</body>
+</html>
