@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Java &mdash; Assunto 05 &mdash; Erros, Respostas Personalizadas e DTOs</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:          #f0f0f5;
+  --surface:     #ffffff;
+  --border:      #d8d5e8;
+  --accent:      #8d62ff;
+  --accent2:     #00c896;
+  --text:        #1a1730;
+  --muted:       #7a748f;
+  --green:       #155e35;
+  --green-bg:    #d6f5e5;
+  --green-border:#6edaa8;
+  --red:         #7a1f1f;
+  --red-bg:      #fde8e8;
+  --red-border:  #f0a0a0;
+  --radius:      10px;
+  --glow:        0 0 18px rgba(141,98,255,0.15);
+  --grad:        linear-gradient(270deg, #8d62ff 53.6%, #00ffbc 98.32%);
+  --surface2:    #f7f5ff;
+  --mint:        #00c896;
+  --danger:      #d63030;
+  --warn:        #d48a00;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+  padding: 0 0 60px;
+  background-image:
+    radial-gradient(ellipse 70% 40% at 50% -10%, rgba(141,98,255,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 30% at 80% 110%, rgba(0,200,150,0.06) 0%, transparent 70%);
+}
+header {
+  text-align: center;
+  padding: 36px 20px 28px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  background: var(--surface);
+  box-shadow: 0 2px 16px rgba(141,98,255,0.07);
+}
+header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 2px;
+  background: linear-gradient(90deg, transparent, #8d62ff, transparent);
+}
+.header-logo { height: 48px; margin-bottom: 14px; display: block; margin-left: auto; margin-right: auto; }
+.logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  background: var(--grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.logo span { opacity: 0.6; }
+.subtitle { color: var(--muted); font-size: .85rem; margin-top: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+.header-badge {
+  display: inline-block; margin-top: 12px; padding: 4px 16px; border-radius: 99px;
+  font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace;
+  background: linear-gradient(270deg, rgba(141,98,255,.15), rgba(0,255,188,.1));
+  border: 1px solid rgba(141,98,255,.3); color: var(--accent); letter-spacing: .06em;
+}
+.wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+/* ── AULA TABS ── */
+.aula-bar {
+  display: flex; gap: 4px; margin-bottom: 1.5rem;
+  background: var(--text); border-radius: 14px; padding: 6px;
+  box-shadow: 0 4px 20px rgba(26,23,48,0.18);
+}
+.aula-tab {
+  flex: 1; padding: 12px 20px; border-radius: 10px; border: none;
+  background: transparent; color: rgba(255,255,255,0.45); cursor: pointer;
+  font-size: 14px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+  transition: all .2s; letter-spacing: .02em;
+}
+.aula-tab.active { background: var(--grad); color: #fff; box-shadow: 0 2px 14px rgba(141,98,255,.45); }
+.aula-section { display: none; }
+.aula-section.active { display: block; }
+
+/* ── INNER TABS ── */
+.tab-bar {
+  display: flex; gap: 6px; margin-bottom: 1.5rem; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 14px; padding: 6px;
+  flex-wrap: wrap; box-shadow: 0 2px 10px rgba(141,98,255,0.06);
+}
+.tab {
+  flex: 1; min-width: 120px; padding: 9px 16px; border-radius: var(--radius);
+  border: none; background: transparent; color: var(--muted); cursor: pointer;
+  font-size: 13px; font-weight: 500; font-family: 'Space Grotesk', sans-serif; transition: all .2s;
+}
+.tab:hover:not(.active) { background: rgba(141,98,255,.08); color: var(--text); }
+.tab.active { background: var(--grad); color: #fff; font-weight: 700; box-shadow: 0 2px 12px rgba(141,98,255,.3); }
+.section { display: none; }
+.section.active { display: block; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.5rem; margin-bottom: 1.25rem; position: relative; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(141,98,255,.35), transparent);
+}
+.card-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700;
+  margin-bottom: 1rem; display: flex; align-items: center; gap: 10px; color: var(--text); flex-wrap: wrap;
+}
+.card p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+/* ── PILLS ── */
+.pill { display: inline-block; padding: 3px 11px; border-radius: 99px; font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.pill-grad  { background: rgba(141,98,255,.12); border: 1px solid rgba(141,98,255,.3);  color: var(--accent); }
+.pill-green { background: rgba(0,200,150,.12);  border: 1px solid rgba(0,200,150,.3);   color: #0a7a5a; }
+.pill-red   { background: rgba(214,48,48,.1);   border: 1px solid rgba(214,48,48,.25);  color: var(--danger); }
+.pill-amber { background: rgba(212,138,0,.1);   border: 1px solid rgba(212,138,0,.25);  color: var(--warn); }
+.pill-blue  { background: rgba(141,98,255,.12); border: 1px solid rgba(141,98,255,.25); color: #5a30cc; }
+.pill-java  { background: rgba(248,152,32,.12); border: 1px solid rgba(248,152,32,.35); color: #9a5000; }
+
+/* ── TABLE ── */
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+th {
+  background: rgba(141,98,255,.1); padding: 10px 14px; text-align: center;
+  font-weight: 700; font-size: 12px; color: var(--accent);
+  font-family: 'JetBrains Mono', monospace; letter-spacing: .05em; border-bottom: 1px solid var(--border);
+}
+td { padding: 10px 14px; text-align: center; border-bottom: 1px solid rgba(141,98,255,.08); font-size: 13px; font-family: 'JetBrains Mono', monospace; }
+td.left { text-align: left; font-family: 'Space Grotesk', sans-serif; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(141,98,255,.04); }
+
+/* ── CODE BLOCK ── */
+.code-block {
+  background: #1e1e2e; border: 1px solid #3a3a5c; border-radius: 10px;
+  padding: 16px 18px; margin: 12px 0; font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; line-height: 1.8; color: #cdd6f4; overflow-x: auto; white-space: pre;
+}
+.code-block .kw  { color: #cba6f7; }
+.code-block .typ { color: #89b4fa; }
+.code-block .str { color: #a6e3a1; }
+.code-block .num { color: #fab387; }
+.code-block .cmt { color: #6c7086; font-style: italic; }
+.code-block .cls { color: #f5c2e7; }
+.code-block .mtd { color: #89dceb; }
+.code-block .ann { color: #f9e2af; }
+
+/* ── SCORE BAR ── */
+.score-bar-area {
+  display: flex; align-items: center; gap: 16px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 18px; margin-bottom: 1.25rem; box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.score-val {
+  font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+  background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.score-label { font-size: 11px; color: var(--muted); }
+.score-track { flex: 1; background: #e5e2f0; border-radius: 99px; height: 8px; overflow: hidden; }
+.score-fill { height: 100%; border-radius: 99px; background: var(--grad); width: 0%; transition: width .4s cubic-bezier(.4,0,.2,1); }
+
+/* ── EXERCISES ── */
+.ex-block {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.25rem; margin-bottom: 1rem; border-left: 3px solid var(--accent);
+  transition: border-left-color .2s; box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.ex-block.done { border-left-color: var(--accent2); }
+.ex-q { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text); line-height: 1.55; }
+.ex-scenario { font-size: 13px; color: var(--muted); margin-bottom: 14px; line-height: 1.55; }
+.choices { display: flex; gap: 8px; flex-wrap: wrap; }
+.choice {
+  padding: 9px 20px; border-radius: 7px; border: 1.5px solid var(--border);
+  background: transparent; color: var(--text); cursor: pointer;
+  font-size: 13px; font-family: 'JetBrains Mono', monospace; font-weight: 600; transition: all .15s;
+}
+.choice:hover:not(:disabled) { background: rgba(141,98,255,.08); border-color: var(--accent); }
+.choice:disabled { cursor: default; }
+.choice.correct { background: var(--green-bg); color: #0a7a5a; border-color: var(--green-border); }
+.choice.wrong   { background: var(--red-bg);   color: var(--danger); border-color: var(--red-border); }
+.feedback { font-size: 13px; margin-top: 12px; padding: 10px 14px; border-radius: var(--radius); display: none; line-height: 1.6; }
+.feedback.show { display: block; }
+.feedback.ok { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.feedback.ko { background: var(--red-bg);   color: var(--red);   border: 1px solid var(--red-border); }
+
+/* ── CURIOSIDADES ── */
+.curi-item { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid rgba(141,98,255,.1); }
+.curi-item:last-of-type { border-bottom: none; }
+.curi-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+  background: linear-gradient(270deg, rgba(141,98,255,.15), rgba(0,200,150,.1));
+  border: 1px solid rgba(141,98,255,.25);
+}
+.curi-title { font-size: 14px; font-weight: 700; font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; color: var(--text); }
+.curi-body { font-size: 13px; color: var(--muted); line-height: 1.65; }
+.curi-body code { background: rgba(141,98,255,.12); color: #5a30cc; padding: 1px 6px; border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+
+/* ── LINKS ── */
+.link-item {
+  color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  text-decoration: none; word-break: break-all; transition: color .15s;
+}
+.link-item:hover { color: var(--mint); text-decoration: underline; }
+
+/* ── GRAD BTN ── */
+.grad-btn {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 14px;
+  padding: 10px 22px; border-radius: 8px; background: var(--grad); color: #fff;
+  border: none; cursor: pointer; font-size: 13px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace; text-decoration: none;
+  transition: opacity .2s, transform .15s; box-shadow: 0 3px 14px rgba(141,98,255,.3);
+}
+.grad-btn:hover { opacity: .88; transform: translateY(-1px); }
+
+/* ── INLINE CODE ── */
+.ic { background: rgba(141,98,255,.12); color: #5a30cc; padding: 1px 7px; border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+
+/* ── TIMELINE ── */
+.timeline-item { display: grid; grid-template-columns: 160px 1fr; gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(141,98,255,.1); }
+.timeline-item:last-child { border-bottom: none; }
+.timeline-era { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--accent); line-height: 1.5; }
+.timeline-body { font-size: 13px; color: var(--muted); line-height: 1.65; }
+.timeline-body strong { color: var(--text); }
+
+/* ── TYPE PICKER (SIMULADOR) ── */
+.type-btns { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 14px; }
+.type-btn {
+  padding: 8px 16px; border-radius: 99px; border: 1.5px solid var(--border);
+  background: transparent; font-size: 12px; font-weight: 700; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace; color: var(--muted); transition: all .15s;
+}
+.type-btn:hover { border-color: var(--accent); color: var(--text); }
+.type-btn.active { background: var(--grad); color: #fff; border-color: transparent; box-shadow: 0 2px 10px rgba(141,98,255,.3); }
+
+.output-block {
+  background: #12121e; border: 1px solid #2a2a40; border-radius: 8px;
+  padding: 14px 18px; margin-top: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.8;
+  color: #a6e3a1; overflow-x: auto; white-space: pre;
+}
+.output-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  color: var(--muted); letter-spacing: .07em; text-transform: uppercase;
+  margin: 12px 0 4px;
+}
+.warn-block {
+  background: rgba(212,138,0,.08); border: 1px solid rgba(212,138,0,.25); border-radius: 8px;
+  padding: 10px 14px; margin-top: 10px; font-size: 12px; color: var(--warn); line-height: 1.6;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── STEPPER (SIMULADOR) ── */
+.stepper { display: flex; gap: 4px; flex-wrap: wrap; margin: 4px 0 14px; }
+.step-btn {
+  flex: 1; min-width: 90px; padding: 10px 8px; border-radius: 8px; border: 1.5px solid var(--border);
+  background: transparent; font-size: 11px; font-weight: 700; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace; color: var(--muted); transition: all .15s; text-align: center;
+}
+.step-btn:hover { border-color: var(--accent); color: var(--text); }
+.step-btn.active { background: var(--grad); color: #fff; border-color: transparent; box-shadow: 0 2px 10px rgba(141,98,255,.3); }
+.step-btn.past { border-color: var(--accent2); color: #0a7a5a; }
+
+footer { text-align: center; margin-top: 3rem; font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+footer span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; }
+
+@media (max-width: 600px) {
+  .tab { min-width: 80px; font-size: 12px; }
+  .timeline-item { grid-template-columns: 1fr; gap: 4px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <img class="header-logo" src="https://capacitabrasil.irede.org.br/assets/capacitaLogo-Ct3BEyem.png" alt="Capacita Brasil"/>
+  <div class="logo">&#x2615; <span>//</span> Java</div>
+  <div class="subtitle">Desenvolvimento Java &mdash; Aula Interativa</div>
+  <div class="header-badge">Assunto 05 &mdash; Aulas 09 e 10 &mdash; Erros, Respostas Personalizadas e DTOs</div>
+</header>
+
+<div class="wrap">
+
+  <a href="../index.html#assunto05" style="display:inline-block;margin-bottom:1rem;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--muted);text-decoration:none">&#x2190; Voltar ao Sumário</a>
+
+  <div class="aula-bar">
+    <button class="aula-tab active">&#x1F4C5; 24 e 26/11 &mdash; Erros, Respostas Personalizadas e DTOs</button>
+  </div>
+
+  <div id="aula01" class="aula-section active">
+
+  <div class="tab-bar">
+    <button class="tab active"  onclick="showTab('resumo1',this)">&#x1F4D8; Resumo</button>
+    <button class="tab"         onclick="showTab('simulador1',this)">&#x26A1; Simulador</button>
+    <button class="tab"         onclick="showTab('exercicios1',this)">&#x1F3AF; Exercícios</button>
+    <button class="tab"         onclick="showTab('questionarios1',this)">&#x1F4DD; Questionários</button>
+    <button class="tab"         onclick="showTab('curiosidades1',this)">&#x1F680; Curiosidades</button>
+    <button class="tab"         onclick="showTab('links1',this)">&#x1F517; Links</button>
+  </div>
+
+  <!-- ═══ RESUMO ═══ -->
+  <div id="resumo1" class="section active">
+
+    <!-- Card 1: O que vamos construir -->
+    <div class="card">
+      <div class="card-title">&#x1F3AF; O que vamos construir <span class="pill pill-grad">Task Manager API</span> <span class="pill pill-blue">Fase 2 &middot; API REST</span></div>
+      <p>Ao fim da aula 08, o <span class="ic">TarefaController</span> já fazia o CRUD de <span class="ic">/api/v1/tarefas</span> com <span class="ic">ResponseEntity</span> e <span class="ic">@Valid</span>. Mas ainda havia dois incômodos: os erros chegavam ao cliente <strong style="color:var(--text)">sem explicação</strong> (404 sem corpo, 400 com as mensagens só no log), e a API devolvia a <strong style="color:var(--text)">própria entidade</strong>, presa por <span class="ic">@JsonIgnore</span>. Nesta semana resolvemos os dois.</p>
+      <table>
+        <tr><th>Aula</th><th>O que entra no projeto</th><th>Tag</th></tr>
+        <tr><td>09 &middot; 24/11</td><td class="left">Criar a <strong>exceção customizada</strong> <span class="ic">ResourceNotFoundException</span>, o <strong><span class="ic">ErrorResponse</span></strong> (corpo de erro próprio) e o <strong><span class="ic">GlobalExceptionHandler</span></strong> com <span class="ic">@ControllerAdvice</span>. O POST passa a devolver <span class="ic">201</span> com o cabeçalho <span class="ic">Location</span>.</td><td><span class="ic">aula-09</span></td></tr>
+        <tr><td>10 &middot; 26/11</td><td class="left">Criar os <strong>DTOs</strong> de tarefa e de usuário (<span class="ic">TarefaDTO</span>, <span class="ic">UsuarioDTO</span>), com <strong>mapeamento manual</strong>, e remover o <span class="ic">@JsonIgnore</span> das entidades.</td><td><span class="ic">aula-10</span></td></tr>
+        <tr><td>11 &middot; 01/12</td><td class="left"><em>Próxima semana:</em> <strong>ModelMapper</strong> e a <strong>camada de serviço</strong> (<span class="ic">TarefaService</span>, <span class="ic">UsuarioService</span>). Já aparecem no slide da aula 10 e neste Resumo, marcados como "aula 11".</td><td><span class="ic">aula-11</span></td></tr>
+      </table>
+      <p style="margin-top:6px">Os pacotes do projeto ao fim da aula 10:</p>
+      <div class="code-block">br.org.irede.taskmanagerapi
+ ├── controller/   <span class="cls">TarefaController</span>, <span class="cls">UsuarioController</span>   <span class="cmt">← aula 10: só DTOs entram e saem</span>
+ ├── dto/          <span class="cls">TarefaDTO</span>, <span class="cls">UsuarioDTO</span>                <span class="cmt">← aula 10 (novo)</span>
+ ├── exception/    <span class="cls">ResourceNotFoundException</span>,
+ │                 <span class="cls">ErrorResponse</span>, <span class="cls">GlobalExceptionHandler</span>  <span class="cmt">← aula 09 (novo)</span>
+ ├── model/        <span class="cls">Tarefa</span>, <span class="cls">Usuario</span>, <span class="cls">Etiqueta</span>, <span class="typ">Prioridade</span>  <span class="cmt">← sem @JsonIgnore</span>
+ ├── repository/   <span class="cls">TarefaRepository</span>, <span class="cls">UsuarioRepository</span>, ...
+ └── config/       <span class="cls">CargaInicial</span>                         <span class="cmt">(aula 11: AppConfig do ModelMapper)</span></div>
+      <div class="warn-block">&#x1F4CC; Os exemplos do slide usam <strong>Produto</strong> e <strong>Cliente</strong>. Aqui cada um aparece traduzido para o Task Manager, com a mesma estrutura de código. Massa de dados: a carga da <span class="ic">v0.1.0</span> (Ana Souza com as tarefas 1 a 3, Bruno Lima com 4 a 6, Leo com 7 e 8). Na coleção do Postman, <span class="ic">{{baseUrl}}</span> = <span class="ic">http://localhost:8080/api/v1</span>.</div>
+    </div>
+
+    <!-- Card 2: Tratamento de erros -->
+    <div class="card">
+      <div class="card-title">&#x1F4E1; Tratamento de Erros e Códigos HTTP <span class="pill pill-blue">Aula 09</span></div>
+      <p>Em um sistema de Web Services, <strong style="color:var(--text)">a comunicação é a chave</strong>. Quando um cliente (um app mobile, um frontend web) faz uma requisição à sua API, <strong style="color:var(--text)">ele não pode ver seu console ou seus logs</strong>. A única resposta que ele recebe é a <strong style="color:var(--text)">Resposta HTTP</strong>.</p>
+      <div class="code-block"><span class="cmt">// O que o SERVIDOR vê (console do NetBeans):</span>
+ERROR ... [dispatcherServlet] : Servlet.service() ... threw exception
+      [Request processing failed: java.lang.RuntimeException: Não encontrado!]
+
+<span class="cmt">// O que o CLIENTE vê (Postman):</span>
+HTTP/1.1 <span class="num">500</span> Internal Server Error
+{ <span class="str">"status"</span>: <span class="num">500</span>, <span class="str">"error"</span>: <span class="str">"Internal Server Error"</span>, <span class="str">"path"</span>: <span class="str">"/api/v1/tarefas/99"</span> }</div>
+      <p style="margin-top:10px">&#x1F539; Para o cliente, "a tarefa 99 não existe" e "o servidor quebrou" ficaram <strong style="color:var(--text)">iguais</strong>. Tratar erros é escolher o <strong style="color:var(--text)">status certo</strong> e um <strong style="color:var(--text)">corpo que explique</strong> o que aconteceu.</p>
+    </div>
+
+    <!-- Card 3: Códigos de status -->
+    <div class="card">
+      <div class="card-title">&#x1F6A6; Código de Status HTTP e Códigos Essenciais <span class="pill pill-blue">Aula 09</span> <span class="pill pill-grad">2xx &middot; 4xx &middot; 5xx</span></div>
+      <table>
+        <tr><th>Classe</th><th>Significado (slide)</th></tr>
+        <tr><td><strong>2xx</strong> Sucesso</td><td class="left">A requisição foi recebida, compreendida e aceita com sucesso.</td></tr>
+        <tr><td><strong>4xx</strong> Erro do Cliente</td><td class="left">A requisição está incorreta e o servidor não pode processá-la.</td></tr>
+        <tr><td><strong>5xx</strong> Erro do Servidor</td><td class="left">A requisição é válida, mas o servidor falhou ao tentar processá-la.</td></tr>
+      </table>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">Códigos essenciais para um desenvolvedor</strong>, e onde cada um aparece no Task Manager:</p>
+      <table>
+        <tr><th>Código</th><th>Significado (slide)</th><th>No Task Manager</th></tr>
+        <tr><td><span class="ic">200 OK</span></td><td class="left">A resposta padrão para sucesso.</td><td class="left">GET e PUT de tarefas</td></tr>
+        <tr><td><span class="ic">201 Created</span></td><td class="left">Sucesso de um POST que resultou na criação de um novo recurso.</td><td class="left">POST <span class="ic">/tarefas</span></td></tr>
+        <tr><td><span class="ic">204 No Content</span></td><td class="left">Requisição processada, mas não há nada para retornar no corpo.</td><td class="left">DELETE <span class="ic">/tarefas/{id}</span></td></tr>
+        <tr><td><span class="ic">400 Bad Request</span></td><td class="left">Em APIs REST, mais comum em falhas de validação (campo obrigatório não enviado, e-mail em formato inválido).</td><td class="left">título vazio ou prioridade nula</td></tr>
+        <tr><td><span class="ic">401 Unauthorized</span></td><td class="left">O cliente não forneceu as credenciais de autenticação necessárias.</td><td class="left">sem token JWT (aula 14)</td></tr>
+        <tr><td><span class="ic">403 Forbidden</span></td><td class="left">O cliente está autenticado, mas não tem permissão para acessar o recurso.</td><td class="left">tarefa de outro usuário (aula 14)</td></tr>
+        <tr><td><span class="ic">404 Not Found</span></td><td class="left">O servidor não encontrou o recurso solicitado na URI especificada.</td><td class="left"><span class="ic">/tarefas/99</span></td></tr>
+        <tr><td><span class="ic">500 Internal Server Error</span></td><td class="left">Algo inesperado aconteceu no back-end.</td><td class="left">exceção não tratada</td></tr>
+      </table>
+      <div class="warn-block">&#x1F4A1; Regra prática: se o problema está <strong>na requisição</strong> (dado inválido, id inexistente), a resposta é <strong>4xx</strong> e o cliente pode corrigir. Se o problema está <strong>no servidor</strong>, é <strong>5xx</strong>. Um 500 para "tarefa não encontrada" é um bug da API.</div>
+    </div>
+
+    <!-- Card 4: ResponseEntity -->
+    <div class="card">
+      <div class="card-title">&#x1F4E6; Uso de ResponseEntity para Retorno Personalizado <span class="pill pill-blue">Aula 09</span></div>
+      <p><strong style="color:var(--text)">ResponseEntity</strong> é uma classe do Spring que <strong style="color:var(--text)">encapsula toda a resposta HTTP</strong>. Ela é composta por três partes principais:</p>
+      <table>
+        <tr><th>Parte</th><th>Descrição (slide)</th><th>Na resposta HTTP</th></tr>
+        <tr><td><strong>Corpo</strong> (Body) <span class="ic">T</span></td><td class="left">O objeto que será serializado em JSON (ex.: uma Tarefa ou uma mensagem de erro).</td><td class="left"><span class="ic">{ "id": 9, ... }</span></td></tr>
+        <tr><td><strong>Status</strong></td><td class="left">O código de status (ex.: <span class="ic">HttpStatus.OK</span>, <span class="ic">HttpStatus.NOT_FOUND</span>).</td><td class="left"><span class="ic">HTTP/1.1 201 Created</span></td></tr>
+        <tr><td><strong>Cabeçalhos</strong> (Headers)</td><td class="left">(Opcional) Metadados HTTP (ex.: o cabeçalho <span class="ic">Location</span> em um 201).</td><td class="left"><span class="ic">Location: /api/v1/tarefas/9</span></td></tr>
+      </table>
+      <div class="code-block" style="margin-top:10px"><span class="typ">ResponseEntity</span>.<span class="mtd">ok</span>(tarefa)                          <span class="cmt">// 200 + corpo</span>
+<span class="typ">ResponseEntity</span>.<span class="mtd">created</span>(location).<span class="mtd">body</span>(tarefa)   <span class="cmt">// 201 + Location + corpo</span>
+<span class="typ">ResponseEntity</span>.<span class="mtd">noContent</span>().<span class="mtd">build</span>()            <span class="cmt">// 204, sem corpo</span>
+<span class="typ">ResponseEntity</span>.<span class="mtd">notFound</span>().<span class="mtd">build</span>()             <span class="cmt">// 404, sem corpo</span>
+<span class="typ">ResponseEntity</span>.<span class="mtd">badRequest</span>().<span class="mtd">body</span>(erro)          <span class="cmt">// 400 + corpo</span>
+<span class="typ">ResponseEntity</span>.<span class="mtd">status</span>(<span class="typ">HttpStatus</span>.NOT_FOUND).<span class="mtd">body</span>(erro) <span class="cmt">// qualquer status + corpo</span></div>
+      <p style="margin-top:10px">&#x1F539; O tipo entre <span class="ic">&lt;&gt;</span> é o tipo do corpo: <span class="ic">ResponseEntity&lt;Tarefa&gt;</span>, <span class="ic">ResponseEntity&lt;String&gt;</span>, ou <span class="ic">ResponseEntity&lt;Void&gt;</span> quando não há corpo. Import: <span class="ic">org.springframework.http.ResponseEntity</span> (e <span class="ic">HttpStatus</span>, do mesmo pacote).</p>
+    </div>
+
+    <!-- Card 5: Antes e depois -->
+    <div class="card">
+      <div class="card-title">&#x1F504; GET 200/404, POST 201 e DELETE 204: Antes e Depois <span class="pill pill-blue">Aula 09</span> <span class="pill pill-green">3 refatorações</span></div>
+      <p>&#x1F539; <strong style="color:var(--text)">GET (Buscar por ID): retornando 200 ou 404.</strong> Antes, uma <span class="ic">RuntimeException</span> sem tratamento estoura <strong style="color:var(--text)">500</strong>:</p>
+      <div class="code-block"><span class="cmt">// Antes</span>
+<span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)
+<span class="kw">public</span> <span class="cls">Tarefa</span> <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    <span class="kw">return</span> repository.<span class="mtd">findById</span>(id)
+            .<span class="mtd">orElseThrow</span>(() -&gt; <span class="kw">new</span> <span class="typ">RuntimeException</span>(<span class="str">"Não encontrado!"</span>)); <span class="cmt">// Estoura 500!</span>
+}
+
+<span class="cmt">// Depois</span>
+<span class="kw">import</span> org.springframework.http.ResponseEntity;
+
+<span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)
+<span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    <span class="typ">Optional</span>&lt;<span class="cls">Tarefa</span>&gt; tarefa = repository.<span class="mtd">findById</span>(id);
+
+    <span class="kw">if</span> (tarefa.<span class="mtd">isPresent</span>()) {
+        <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">ok</span>(tarefa.<span class="mtd">get</span>()); <span class="cmt">// Retorna 200 OK com a tarefa no corpo</span>
+    } <span class="kw">else</span> {
+        <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">notFound</span>().<span class="mtd">build</span>(); <span class="cmt">// Retorna 404 Not Found sem corpo</span>
+    }
+}</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">POST (Criar): retornando 201 Created.</strong> Por padrão, um POST que devolve o objeto responde 200. A boa prática é 201 com a URI do novo recurso no cabeçalho <span class="ic">Location</span>:</p>
+      <div class="code-block"><span class="cmt">// Antes</span>
+<span class="ann">@PostMapping</span>
+<span class="kw">public</span> <span class="cls">Tarefa</span> <span class="mtd">criar</span>(<span class="ann">@RequestBody</span> <span class="cls">Tarefa</span> tarefa, <span class="ann">@RequestParam</span> <span class="typ">Long</span> usuarioId) {
+    ...
+    <span class="kw">return</span> repository.<span class="mtd">save</span>(tarefa); <span class="cmt">// Retorna 200 OK</span>
+}
+
+<span class="cmt">// Depois</span>
+<span class="kw">import</span> java.net.URI;
+
+<span class="ann">@PostMapping</span>
+<span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">criar</span>(<span class="ann">@Valid</span> <span class="ann">@RequestBody</span> <span class="cls">Tarefa</span> tarefa, <span class="ann">@RequestParam</span> <span class="typ">Long</span> usuarioId) {
+    ...
+    <span class="cls">Tarefa</span> tarefaSalva = repository.<span class="mtd">save</span>(tarefa);
+
+    <span class="cmt">// Boa prática: Retornar a URI do novo recurso no cabeçalho "Location"</span>
+    <span class="typ">URI</span> location = <span class="typ">URI</span>.<span class="mtd">create</span>(<span class="str">"/api/v1/tarefas/"</span> + tarefaSalva.<span class="mtd">getId</span>());
+
+    <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">created</span>(location).<span class="mtd">body</span>(tarefaSalva); <span class="cmt">// Retorna 201 Created</span>
+}</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">DELETE (Deletar): retornando 204 No Content.</strong> Forçar 200 com <span class="ic">@ResponseStatus</span> "não é o ideal": não há nada para devolver.</p>
+      <div class="code-block"><span class="cmt">// Antes</span>
+<span class="ann">@DeleteMapping</span>(<span class="str">"/{id}"</span>)
+<span class="ann">@ResponseStatus</span>(<span class="typ">HttpStatus</span>.OK) <span class="cmt">// Não é o ideal</span>
+<span class="kw">public void</span> <span class="mtd">remover</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    repository.<span class="mtd">deleteById</span>(id); <span class="cmt">// Retorna 200 OK com corpo vazio</span>
+}
+
+<span class="cmt">// Depois</span>
+<span class="ann">@DeleteMapping</span>(<span class="str">"/{id}"</span>)
+<span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="typ">Void</span>&gt; <span class="mtd">remover</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    <span class="kw">if</span> (!repository.<span class="mtd">existsById</span>(id)) {
+        <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">notFound</span>().<span class="mtd">build</span>(); <span class="cmt">// Retorna 404 se não existir</span>
+    }
+    repository.<span class="mtd">deleteById</span>(id);
+    <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">noContent</span>().<span class="mtd">build</span>(); <span class="cmt">// Retorna 204 No Content</span>
+}</div>
+      <div class="warn-block">&#x1F4CC; Boa parte disso você já fez na aula 08. A novidade aqui é o <strong>Location</strong> no 201. Repare também no <span class="ic">existsById</span>: no Spring Data 3, <span class="ic">deleteById</span> de um id inexistente <strong>não lança erro</strong>. Sem a verificação, o DELETE da tarefa 99 responderia sucesso sem ter apagado nada.</div>
+    </div>
+
+    <!-- Card 6: Exceções customizadas -->
+    <div class="card">
+      <div class="card-title">&#x1F6A8; Exceções Customizadas <span class="pill pill-blue">Aula 09</span> <span class="pill pill-amber">RuntimeException</span></div>
+      <p><strong style="color:var(--text)">Crie exceções claras que representem seus erros de negócio.</strong> No pacote <span class="ic">exception</span>:</p>
+      <div class="code-block"><span class="kw">package</span> br.org.irede.taskmanagerapi.exception;
+
+<span class="kw">public class</span> <span class="cls">ResourceNotFoundException</span> <span class="kw">extends</span> <span class="typ">RuntimeException</span> {
+    <span class="kw">public</span> <span class="cls">ResourceNotFoundException</span>(<span class="typ">String</span> message) {
+        <span class="kw">super</span>(message);
+    }
+}</div>
+      <p style="margin-top:10px"><strong style="color:var(--text)">Refatore o controlador:</strong></p>
+      <div class="code-block"><span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)
+<span class="kw">public</span> <span class="cls">Tarefa</span> <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    <span class="cmt">// Código limpo! Focado na regra de negócio.</span>
+    <span class="kw">return</span> repository.<span class="mtd">findById</span>(id)
+            .<span class="mtd">orElseThrow</span>(() -&gt; <span class="kw">new</span> <span class="cls">ResourceNotFoundException</span>(<span class="str">"ID não encontrado"</span>));
+}</div>
+      <p style="margin-top:10px">&#x1F539; Por estender <span class="ic">RuntimeException</span>, ela é uma exceção <strong style="color:var(--text)">não verificada</strong> (<em>unchecked</em>): não precisa de <span class="ic">throws</span> na assinatura nem de <span class="ic">try/catch</span> em quem chama.</p>
+      <p style="margin-top:6px">&#x1F539; O nome diz <strong style="color:var(--text)">o que aconteceu</strong> ("recurso não encontrado") em vez de um genérico "Não encontrado!". É esse tipo que o tratamento centralizado do próximo card vai reconhecer.</p>
+      <div class="warn-block">&#x26A0; Sozinha, a exceção ainda vira <strong>500</strong>: para o Spring, ela é uma RuntimeException como outra qualquer. Quem a traduz para 404 é o <span class="ic">@ControllerAdvice</span>.</div>
+    </div>
+
+    <!-- Card 7: ControllerAdvice -->
+    <div class="card">
+      <div class="card-title">&#x1F6E1; Centralize o Tratamento com @ControllerAdvice <span class="pill pill-blue">Aula 09</span> <span class="pill pill-grad">GlobalExceptionHandler</span></div>
+      <p>&#x1F539; <span class="ic">@ControllerAdvice</span>: é uma classe que <strong style="color:var(--text)">"escuta" exceções de todos os controladores</strong>.</p>
+      <p style="margin-top:6px">&#x1F539; Usamos <span class="ic">@ExceptionHandler</span> dentro dela para <strong style="color:var(--text)">tratar exceções específicas</strong>. O código do slide:</p>
+      <div class="code-block"><span class="ann">@ControllerAdvice</span>
+<span class="kw">public class</span> <span class="cls">GlobalExceptionHandler</span> {
+    <span class="cmt">// Captura nossa exceção customizada</span>
+    <span class="ann">@ExceptionHandler</span>(<span class="cls">ResourceNotFoundException</span>.<span class="kw">class</span>)
+    <span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="typ">String</span>&gt; <span class="mtd">handleNotFound</span>(<span class="cls">ResourceNotFoundException</span> ex) {
+        <span class="cmt">// E a traduz para um 404</span>
+        <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">status</span>(<span class="typ">HttpStatus</span>.NOT_FOUND)
+                             .<span class="mtd">body</span>(ex.<span class="mtd">getMessage</span>());
+    }
+}</div>
+      <div class="output-block"><span style="color:#f38ba8">HTTP/1.1 404 Not Found</span>
+Content-Type: text/plain;charset=UTF-8
+
+ID não encontrado</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">No Task Manager: o <span class="ic">ErrorResponse</span>.</strong> Uma String solta não diz o status, a rota nem o momento do erro. O planejamento da aula 09 pede um <strong style="color:var(--text)">corpo de erro próprio</strong>, igual para todos os erros da API:</p>
+      <div class="code-block"><span class="kw">public class</span> <span class="cls">ErrorResponse</span> {
+    <span class="kw">private</span> <span class="typ">LocalDateTime</span> timestamp;
+    <span class="kw">private int</span> status;
+    <span class="kw">private</span> <span class="typ">String</span> erro;
+    <span class="kw">private</span> <span class="typ">String</span> mensagem;
+    <span class="kw">private</span> <span class="typ">String</span> caminho;
+    <span class="cmt">// construtor (status, erro, mensagem, caminho) com timestamp = LocalDateTime.now() + getters</span>
+}
+
+<span class="ann">@ExceptionHandler</span>(<span class="cls">ResourceNotFoundException</span>.<span class="kw">class</span>)
+<span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">ErrorResponse</span>&gt; <span class="mtd">handleNotFound</span>(<span class="cls">ResourceNotFoundException</span> ex,
+                                                    <span class="typ">HttpServletRequest</span> request) {
+    <span class="cls">ErrorResponse</span> erro = <span class="kw">new</span> <span class="cls">ErrorResponse</span>(<span class="num">404</span>, <span class="str">"Não encontrado"</span>,
+            ex.<span class="mtd">getMessage</span>(), request.<span class="mtd">getRequestURI</span>());
+    <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">status</span>(<span class="typ">HttpStatus</span>.NOT_FOUND).<span class="mtd">body</span>(erro);
+}
+
+<span class="ann">@ExceptionHandler</span>(<span class="typ">MethodArgumentNotValidException</span>.<span class="kw">class</span>)   <span class="cmt">// lançada pelo @Valid</span>
+<span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">ErrorResponse</span>&gt; <span class="mtd">handleValidacao</span>(<span class="typ">MethodArgumentNotValidException</span> ex,
+                                                     <span class="typ">HttpServletRequest</span> request) {
+    <span class="typ">String</span> mensagem = ex.<span class="mtd">getBindingResult</span>().<span class="mtd">getFieldErrors</span>().<span class="mtd">stream</span>()
+            .<span class="mtd">map</span>(e -&gt; e.<span class="mtd">getField</span>() + <span class="str">": "</span> + e.<span class="mtd">getDefaultMessage</span>())
+            .<span class="mtd">collect</span>(<span class="typ">Collectors</span>.<span class="mtd">joining</span>(<span class="str">"; "</span>));
+    <span class="cls">ErrorResponse</span> erro = <span class="kw">new</span> <span class="cls">ErrorResponse</span>(<span class="num">400</span>, <span class="str">"Dados inválidos"</span>, mensagem, request.<span class="mtd">getRequestURI</span>());
+    <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">badRequest</span>().<span class="mtd">body</span>(erro);
+}</div>
+      <div class="output-block"><span style="color:#f38ba8">HTTP/1.1 404 Not Found</span>
+Content-Type: application/json
+
+{
+  "timestamp": "2026-11-24T19:12:30.481",
+  "status": 404,
+  "erro": "Não encontrado",
+  "mensagem": "Tarefa com id 99 não encontrada",
+  "caminho": "/api/v1/tarefas/99"
+}</div>
+      <div class="warn-block">&#x1F4A1; O 400 da aula 08 finalmente explica o erro: <span class="ic">"mensagem": "titulo: O título deve ter no mínimo 3 caracteres; prioridade: A prioridade é obrigatória"</span>. Imports: <span class="ic">org.springframework.web.bind.annotation.ControllerAdvice</span>/<span class="ic">ExceptionHandler</span>, <span class="ic">org.springframework.web.bind.MethodArgumentNotValidException</span> e <span class="ic">jakarta.servlet.http.HttpServletRequest</span>.</div>
+    </div>
+
+    <!-- Card 8: Contaminação -->
+    <div class="card">
+      <div class="card-title">&#x1F9EA; O Problema: "Contaminação" do Controlador <span class="pill pill-blue">Aula 09</span></div>
+      <p>Por que tanto trabalho, se o <span class="ic">.map(...).orElse(...)</span> da aula 08 já devolvia 404? Porque <strong style="color:var(--text)">o controlador está fazendo duas coisas: lógica de negócio e lógica de resposta HTTP</strong>.</p>
+      <div class="code-block"><span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)
+<span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    <span class="kw">return</span> repository.<span class="mtd">findById</span>(id)
+            .<span class="mtd">map</span>(t -&gt; <span class="typ">ResponseEntity</span>.<span class="mtd">ok</span>(t))                 <span class="cmt">// Lógica de resposta HTTP</span>
+            .<span class="mtd">orElse</span>(<span class="typ">ResponseEntity</span>.<span class="mtd">notFound</span>().<span class="mtd">build</span>());  <span class="cmt">// Lógica de erro</span>
+}</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">Objetivo:</strong> queremos que o controlador <strong style="color:var(--text)">apenas execute a lógica e lance uma exceção se algo der errado</strong>. Quem decide o status e o corpo do erro é o <span class="ic">GlobalExceptionHandler</span>, em um lugar só.</p>
+      <table>
+        <tr><th></th><th>Com <span class="ic">.map/.orElse</span> em cada método</th><th>Com exceção + <span class="ic">@ControllerAdvice</span></th></tr>
+        <tr><td class="left">Onde fica o 404</td><td class="left">repetido em GET, PUT, DELETE e POST</td><td class="left">um único <span class="ic">@ExceptionHandler</span></td></tr>
+        <tr><td class="left">Corpo do erro</td><td class="left">vazio ou diferente em cada método</td><td class="left">sempre o mesmo <span class="ic">ErrorResponse</span></td></tr>
+        <tr><td class="left">Controlador</td><td class="left">mistura regra e HTTP</td><td class="left">só a regra: busca ou lança</td></tr>
+      </table>
+    </div>
+
+    <!-- Card 9: DTOs -->
+    <div class="card">
+      <div class="card-title">&#x1F4E8; DTOs (Data Transfer Objects) <span class="pill pill-blue">Aula 10</span> <span class="pill pill-grad">Contrato da API</span></div>
+      <p>&#x1F539; É um <strong style="color:var(--text)">POJO</strong> (classe Java simples).<br/>
+      &#x1F539; <strong style="color:var(--text)">NÃO é uma entidade</strong> (não tem <span class="ic">@Entity</span>).<br/>
+      &#x1F539; É um <strong style="color:var(--text)">"contêiner" de dados feito sob medida para sua API</strong>.<br/>
+      &#x1F539; Você define <strong style="color:var(--text)">exatamente quais campos o cliente pode ver e quais pode enviar</strong>.<br/>
+      &#x1F539; <strong style="color:var(--text)">Contrato da API: seu DTO. Persistência: sua Entidade.</strong></p>
+      <p style="margin-top:10px"><strong style="color:var(--text)">Entidade (Banco) vs. DTO (API):</strong> o exemplo do slide é quase igual ao <span class="ic">Usuario</span> do Task Manager.</p>
+      <table>
+        <tr><th>Usuario.java (@Entity)</th><th>UsuarioDTO.java (POJO)</th></tr>
+        <tr><td class="left"><span class="ic">@Id private Long id;</span></td><td class="left"><span class="ic">private Long id;</span></td></tr>
+        <tr><td class="left"><span class="ic">private String nome;</span></td><td class="left"><span class="ic">private String nome;</span></td></tr>
+        <tr><td class="left"><span class="ic">private String email;</span></td><td class="left"><span class="ic">private String email;</span></td></tr>
+        <tr><td class="left"><span class="ic">private String senha;</span> <em>// Sensível</em></td><td class="left"><em>// Sem senha!</em></td></tr>
+        <tr><td class="left"><span class="ic">private List&lt;Tarefa&gt; tarefas;</span> <em>// Interno</em></td><td class="left"><em>// Sem tarefas</em></td></tr>
+      </table>
+      <p style="margin-top:10px">&#x1F539; No slide, o campo interno é <span class="ic">dataCadastro</span>. No Task Manager, o que fica de fora é a lista <span class="ic">tarefas</span>, que causaria a recursão infinita <span class="ic">Usuario &rarr; tarefas &rarr; usuario &rarr; ...</span> no JSON.</p>
+      <p style="margin-top:6px">&#x1F539; O <span class="ic">TarefaDTO</span> segue o fluxo do slide da aula 10: o <strong style="color:var(--text)">mesmo DTO</strong> entra validado no POST/PUT e sai no GET. O usuário vira só o <span class="ic">usuarioId</span>:</p>
+      <div class="code-block"><span class="kw">package</span> br.org.irede.taskmanagerapi.dto;
+
+<span class="kw">public class</span> <span class="cls">TarefaDTO</span> {
+    <span class="kw">private</span> <span class="typ">Long</span> id;
+
+    <span class="ann">@NotBlank</span>(message = <span class="str">"O título é obrigatório"</span>)
+    <span class="ann">@Size</span>(min = <span class="num">3</span>, message = <span class="str">"O título deve ter no mínimo 3 caracteres"</span>)
+    <span class="kw">private</span> <span class="typ">String</span> titulo;
+
+    <span class="kw">private</span> <span class="typ">String</span> descricao;
+
+    <span class="ann">@NotNull</span>(message = <span class="str">"A prioridade é obrigatória"</span>)
+    <span class="kw">private</span> <span class="typ">Prioridade</span> prioridade;
+
+    <span class="kw">private</span> <span class="typ">LocalDate</span> prazo;
+    <span class="kw">private boolean</span> concluida;
+
+    <span class="ann">@NotNull</span>(message = <span class="str">"O usuário é obrigatório"</span>)
+    <span class="kw">private</span> <span class="typ">Long</span> usuarioId;
+
+    <span class="cmt">// getters e setters (Alt+Insert no NetBeans)</span>
+}</div>
+      <div class="warn-block">&#x1F4CC; As validações saem da entidade e vão para o DTO: é ele que recebe o JSON. Com o DTO na fronteira, o <span class="ic">@JsonIgnore</span> de <span class="ic">Tarefa.usuario</span> e de <span class="ic">Etiqueta.tarefas</span> deixa de ser necessário, porque a entidade nunca mais é serializada.</div>
+    </div>
+
+    <!-- Card 10: Mapeamento manual -->
+    <div class="card">
+      <div class="card-title">&#x270D; Mapeamento Manual <span class="pill pill-blue">Aula 10</span></div>
+      <p><strong style="color:var(--text)">Escrevemos o código de conversão na mão.</strong> O exemplo do slide (Cliente &rarr; ClienteDTO), no Task Manager:</p>
+      <div class="code-block"><span class="kw">private</span> <span class="cls">UsuarioDTO</span> <span class="mtd">converterParaDto</span>(<span class="cls">Usuario</span> usuario) {
+    <span class="cls">UsuarioDTO</span> dto = <span class="kw">new</span> <span class="cls">UsuarioDTO</span>();
+    dto.<span class="mtd">setId</span>(usuario.<span class="mtd">getId</span>());
+    dto.<span class="mtd">setNome</span>(usuario.<span class="mtd">getNome</span>());
+    dto.<span class="mtd">setEmail</span>(usuario.<span class="mtd">getEmail</span>());
+    <span class="kw">return</span> dto;
+}
+
+<span class="kw">private</span> <span class="cls">TarefaDTO</span> <span class="mtd">converterParaDto</span>(<span class="cls">Tarefa</span> tarefa) {
+    <span class="cls">TarefaDTO</span> dto = <span class="kw">new</span> <span class="cls">TarefaDTO</span>();
+    dto.<span class="mtd">setId</span>(tarefa.<span class="mtd">getId</span>());
+    dto.<span class="mtd">setTitulo</span>(tarefa.<span class="mtd">getTitulo</span>());
+    dto.<span class="mtd">setDescricao</span>(tarefa.<span class="mtd">getDescricao</span>());
+    dto.<span class="mtd">setPrioridade</span>(tarefa.<span class="mtd">getPrioridade</span>());
+    dto.<span class="mtd">setPrazo</span>(tarefa.<span class="mtd">getPrazo</span>());
+    dto.<span class="mtd">setConcluida</span>(tarefa.<span class="mtd">isConcluida</span>());
+    dto.<span class="mtd">setUsuarioId</span>(tarefa.<span class="mtd">getUsuario</span>().<span class="mtd">getId</span>());   <span class="cmt">// só o id do dono</span>
+    <span class="kw">return</span> dto;
+}</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">Vantagem:</strong> tudo explícito, fácil de ler e de depurar. <strong style="color:var(--text)">Desvantagem:</strong> uma linha por campo, e um campo novo na entidade exige lembrar de atualizar a conversão.</p>
+      <p style="margin-top:6px">&#x1F539; <span class="ic">tarefa.getUsuario().getId()</span> não dispara SELECT: com <span class="ic">Tarefa.usuario</span> LAZY, o Hibernate já guarda o id do dono no proxy.</p>
+    </div>
+
+    <!-- Card 11: ModelMapper -->
+    <div class="card">
+      <div class="card-title">&#x1F916; Mapeamento Automático (ModelMapper) <span class="pill pill-blue">Aula 10</span> <span class="pill pill-java">no projeto: aula 11</span></div>
+      <p>&#x1F539; Usamos uma <strong style="color:var(--text)">biblioteca para fazer o trabalho pesado</strong>.<br/>
+      &#x1F539; <strong style="color:var(--text)">Princípio:</strong> ele "lê" os nomes dos atributos e <strong style="color:var(--text)">copia os valores se os nomes forem iguais</strong> (<span class="ic">nome -&gt; nome</span>).</p>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">Dependência (pom.xml):</strong></p>
+      <div class="code-block">&lt;<span class="cls">dependency</span>&gt;
+    &lt;<span class="cls">groupId</span>&gt;org.modelmapper&lt;/<span class="cls">groupId</span>&gt;
+    &lt;<span class="cls">artifactId</span>&gt;modelmapper&lt;/<span class="cls">artifactId</span>&gt;
+    &lt;<span class="cls">version</span>&gt;3.2.0&lt;/<span class="cls">version</span>&gt;   <span class="cmt">&lt;!-- o Spring Boot não gerencia esta versão --&gt;</span>
+&lt;/<span class="cls">dependency</span>&gt;</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">Configurando o ModelMapper (Obrigatório!).</strong> Precisamos "ensinar" o Spring a criar e gerenciar o ModelMapper: criamos uma classe de configuração com a anotação <span class="ic">@Bean</span>.</p>
+      <div class="code-block"><span class="ann">@Configuration</span>
+<span class="kw">public class</span> <span class="cls">AppConfig</span> {
+
+    <span class="ann">@Bean</span>
+    <span class="kw">public</span> <span class="typ">ModelMapper</span> <span class="mtd">modelMapper</span>() {
+        <span class="kw">return new</span> <span class="typ">ModelMapper</span>();
+    }
+}</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">Usando o ModelMapper (é simples!).</strong> Injetamos o ModelMapper em nossa classe de serviço e usamos o método <span class="ic">.map()</span>:</p>
+      <div class="code-block"><span class="ann">@Autowired</span>
+<span class="kw">private</span> <span class="typ">ModelMapper</span> modelMapper; <span class="cmt">// Injeta o bean</span>
+
+<span class="ann">@Autowired</span>
+<span class="kw">private</span> <span class="cls">TarefaRepository</span> repository;
+
+<span class="kw">public</span> <span class="cls">TarefaDTO</span> <span class="mtd">buscarPorId</span>(<span class="typ">Long</span> id) {
+    <span class="cls">Tarefa</span> tarefa = repository.<span class="mtd">findById</span>(id).<span class="mtd">orElseThrow</span>();
+
+    <span class="cmt">// Mapeamento automático!</span>
+    <span class="kw">return</span> modelMapper.<span class="mtd">map</span>(tarefa, <span class="cls">TarefaDTO</span>.<span class="kw">class</span>);
+}</div>
+      <p style="margin-top:10px">&#x1F539; <span class="ic">titulo &rarr; titulo</span>, <span class="ic">prazo &rarr; prazo</span>... e até <span class="ic">usuario.id &rarr; usuarioId</span>: o ModelMapper quebra <span class="ic">usuarioId</span> em "usuario" + "id" e encontra <span class="ic">getUsuario().getId()</span>.</p>
+      <div class="warn-block">&#x1F4C5; No Task Manager, o ModelMapper e a classe de serviço entram na <strong>aula 11</strong> (assunto 06). Na aula 10 fazemos a conversão manual, para entender o que a biblioteca automatiza. O <span class="ic">AppConfig</span> vai para o pacote <span class="ic">config</span>.</div>
+    </div>
+
+    <!-- Card 12: Camadas -->
+    <div class="card">
+      <div class="card-title">&#x1F3DB; Integração com Banco via JPA e Separação de Camadas <span class="pill pill-blue">Aula 10</span> <span class="pill pill-grad">3 camadas</span></div>
+      <p><strong style="color:var(--text)">Agora que temos DTOs e uma forma de mapeá-los, onde essa conversão deve acontecer?</strong> A resposta é: na <strong style="color:var(--text)">Camada de Serviço</strong> (<em>Service Layer</em>). A arquitetura padrão de uma API Spring Boot é dividida em três camadas:</p>
+      <table>
+        <tr><th>Anotação</th><th>Camada</th><th>No Task Manager</th></tr>
+        <tr><td><span class="ic">@RestController</span></td><td class="left">Apresentação</td><td class="left"><span class="ic">TarefaController</span>: HTTP, status, DTOs</td></tr>
+        <tr><td><span class="ic">@Service</span></td><td class="left">Serviço / Negócio</td><td class="left"><span class="ic">TarefaService</span> (aula 11): regras e conversão</td></tr>
+        <tr><td><span class="ic">@Repository</span></td><td class="left">Acesso a Dados</td><td class="left"><span class="ic">TarefaRepository</span>: JPA</td></tr>
+      </table>
+      <p style="margin-top:10px"><strong style="color:var(--text)">Boas práticas: um projeto profissional é organizado por responsabilidade.</strong></p>
+      <div class="code-block">br.org.irede.taskmanagerapi/
+├── controller/   <span class="cmt">(APIs, HTTP)</span>
+├── service/      <span class="cmt">(Lógica de Negócio)</span>
+├── repository/   <span class="cmt">(Acesso ao Banco)</span>
+├── model/        <span class="cmt">(Entidades @Entity)</span>
+├── dto/          <span class="cmt">(Classes de Transferência)</span>
+└── config/       <span class="cmt">(Beans, Segurança)</span></div>
+      <p style="margin-top:10px">Pense na Camada de Serviço como o <strong style="color:var(--text)">núcleo protegido</strong> da sua aplicação:</p>
+      <div class="code-block"><span class="cmt">Fluxo de Entrada (POST):</span>
+JSON → Controller → <span class="cls">TarefaDTO</span> (Validado) → Fronteira (Service) → <span class="cls">Tarefa</span> (Entity) → Repository → Banco
+
+<span class="cmt">Fluxo de Saída (GET):</span>
+Banco → Repository → <span class="cls">Tarefa</span> (Entity) → Fronteira (Service) → <span class="cls">TarefaDTO</span> → Controller → JSON</div>
+      <p style="margin-top:10px">&#x1F539; <strong style="color:var(--text)">O Controlador e o Cliente Externo nunca tocam na Entidade.</strong></p>
+      <div class="warn-block">&#x1F4C5; Na aula 10, sem a camada de serviço, a conversão fica em métodos privados do controlador: o <strong>cliente externo</strong> já não vê a entidade. Na aula 11, os <span class="ic">converterParaDto</span> e o acesso ao repositório se mudam para o <span class="ic">TarefaService</span>, e aí o controlador também deixa de tocar na entidade. A prática do slide ("CRUD Completo com DTOs e Serviços") está na aba &#x1F517; Links.</div>
+    </div>
+
+  </div><!-- /resumo1 -->
+
+  <!-- ═══ SIMULADOR ═══ -->
+  <div id="simulador1" class="section">
+
+    <!-- Part 1: Antes x Depois -->
+    <div class="card">
+      <div class="card-title">&#x1F504; Antes &times; Depois: o Status Certo <span class="pill pill-grad">ResponseEntity</span></div>
+      <p style="margin-bottom:4px">Escolha uma requisição do Postman e compare a versão "antes" do slide com a versão "depois". A massa de dados tem as tarefas 1 a 8:</p>
+      <div class="type-btns" id="adOps">
+        <button class="type-btn active" onclick="runAD('get99',this)">GET /tarefas/99</button>
+        <button class="type-btn" onclick="runAD('post',this)">POST /tarefas</button>
+        <button class="type-btn" onclick="runAD('del8',this)">DELETE /tarefas/8</button>
+        <button class="type-btn" onclick="runAD('del99',this)">DELETE /tarefas/99</button>
+      </div>
+      <div class="output-label">Requisição</div>
+      <div class="code-block" id="adReq"></div>
+      <div class="output-label">Antes &mdash; código</div>
+      <div class="code-block" id="adAntesCode"></div>
+      <div class="output-label">Antes &mdash; resposta no Postman</div>
+      <div class="output-block" id="adAntesResp"></div>
+      <div class="output-label">Depois &mdash; código</div>
+      <div class="code-block" id="adDepoisCode"></div>
+      <div class="output-label">Depois &mdash; resposta no Postman</div>
+      <div class="output-block" id="adDepoisResp"></div>
+      <div class="warn-block" id="adDesc"></div>
+    </div>
+
+    <!-- Part 2: Caminho da exceção -->
+    <div class="card">
+      <div class="card-title">&#x1F6A8; O Caminho de uma Exceção <span class="pill pill-blue">Stepper</span> <span class="pill pill-amber">@ControllerAdvice</span></div>
+      <p style="margin-bottom:4px">Siga, passo a passo, uma requisição que dá errado até virar um <span class="ic">ErrorResponse</span> no Postman. Escolha o cenário:</p>
+      <div class="type-btns" id="excOps">
+        <button class="type-btn active" onclick="setExcCenario('nf',this)">404 &middot; tarefa inexistente</button>
+        <button class="type-btn" onclick="setExcCenario('val',this)">400 &middot; validação</button>
+      </div>
+      <div class="stepper" id="excStepper">
+        <button class="step-btn active" onclick="setExcStep(0,this)">1. requisição</button>
+        <button class="step-btn" onclick="setExcStep(1,this)">2. controller</button>
+        <button class="step-btn" onclick="setExcStep(2,this)">3. exceção sobe</button>
+        <button class="step-btn" onclick="setExcStep(3,this)">4. advice</button>
+        <button class="step-btn" onclick="setExcStep(4,this)">5. ErrorResponse</button>
+        <button class="step-btn" onclick="setExcStep(5,this)">6. Postman</button>
+      </div>
+      <div class="code-block" id="excCode" style="min-height:70px"></div>
+      <div class="output-label" id="excOutLabel">Estado</div>
+      <div class="output-block" id="excOut"></div>
+      <div class="warn-block" id="excDesc"></div>
+    </div>
+
+    <!-- Part 3: Entidade x DTO -->
+    <div class="card">
+      <div class="card-title">&#x1F4E8; Entidade &times; DTO na Resposta <span class="pill pill-blue">Aula 10</span> <span class="pill pill-java">+ prévia da aula 11</span></div>
+      <p style="margin-bottom:4px">O mesmo <span class="ic">GET {{baseUrl}}/tarefas/1</span> (e um usuário), devolvendo coisas diferentes. Veja por que a API precisa de um contrato próprio:</p>
+      <div class="type-btns" id="dtoOps">
+        <button class="type-btn active" onclick="runDto('proxy',this)">entidade, sem @JsonIgnore</button>
+        <button class="type-btn" onclick="runDto('senha',this)">entidade com usuário carregado</button>
+        <button class="type-btn" onclick="runDto('ignore',this)">entidade + @JsonIgnore (aula 08)</button>
+        <button class="type-btn" onclick="runDto('dto',this)">TarefaDTO manual (aula 10)</button>
+        <button class="type-btn" onclick="runDto('usuario',this)">UsuarioDTO (aula 10)</button>
+        <button class="type-btn" onclick="runDto('mapper',this)">ModelMapper (aula 11)</button>
+      </div>
+      <div class="code-block" id="dtoCode" style="min-height:70px"></div>
+      <div class="output-label">Resposta no Postman</div>
+      <div class="output-block" id="dtoResp"></div>
+      <div class="warn-block" id="dtoDesc"></div>
+    </div>
+
+  </div><!-- /simulador1 -->
+
+  <!-- ═══ EXERCÍCIOS ═══ -->
+  <div id="exercicios1" class="section">
+
+    <div class="score-bar-area">
+      <div>
+        <div class="score-val"><span id="scoreVal1">0</span>/5</div>
+        <div class="score-label">acertos</div>
+      </div>
+      <div style="flex:1">
+        <div class="score-track"><div class="score-fill" id="scoreBar1"></div></div>
+      </div>
+    </div>
+
+    <!-- Ex 1 -->
+    <div class="ex-block" id="ex1-0">
+      <div class="ex-q">Questão 1 &mdash; O cliente de uma API (app mobile, frontend web) não vê o console nem os logs do servidor: a única informação que ele recebe é a <strong>resposta HTTP</strong>.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(0,this,true)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(0,this,false)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-0"></div>
+    </div>
+
+    <!-- Ex 2 -->
+    <div class="ex-block" id="ex1-1">
+      <div class="ex-q">Questão 2 &mdash; <code class="ic">401 Unauthorized</code> indica que o cliente está autenticado, mas não tem permissão para acessar o recurso.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(1,this,false)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(1,this,true)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-1"></div>
+    </div>
+
+    <!-- Ex 3 -->
+    <div class="ex-block" id="ex1-2">
+      <div class="ex-q">Questão 3 &mdash; <code class="ic">ResponseEntity.created(location)</code> seguido de <code class="ic">.body(tarefaSalva)</code> responde <strong>201 Created</strong>, com a URI da nova tarefa no cabeçalho <code class="ic">Location</code> e a tarefa no corpo.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(2,this,true)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(2,this,false)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-2"></div>
+    </div>
+
+    <!-- Ex 4 -->
+    <div class="ex-block" id="ex1-3">
+      <div class="ex-q">Questão 4 &mdash; Para o <code class="ic">GlobalExceptionHandler</code> funcionar, cada método do controlador precisa de um <code class="ic">try/catch</code> que o chame quando a exceção acontecer.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(3,this,false)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(3,this,true)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-3"></div>
+    </div>
+
+    <!-- Ex 5 -->
+    <div class="ex-block" id="ex1-4">
+      <div class="ex-q">Questão 5 &mdash; O <code class="ic">UsuarioDTO</code> é um POJO sem <code class="ic">@Entity</code>, e deixar o campo <code class="ic">senha</code> de fora dele impede que a senha apareça no JSON da API.</div>
+      <div class="choices">
+        <button class="choice" onclick="answer1(4,this,true)">Verdadeiro</button>
+        <button class="choice" onclick="answer1(4,this,false)">Falso</button>
+      </div>
+      <div class="feedback" id="fb1-4"></div>
+    </div>
+
+  </div><!-- /exercicios1 -->
+
+  <!-- ═══ QUESTIONÁRIOS ═══ -->
+  <div id="questionarios1" class="section">
+    <div class="card">
+      <div class="card-title">&#x1F4DD; Questionários</div>
+      <p style="margin-bottom:1rem">Teste seu conhecimento com os questionários abaixo. Cada arquivo contém questões de verdadeiro ou falso e exercícios práticos de implementação.</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <a class="grad-btn" href="questionario-a05-01.html">&#x1F4CB; Quiz 01 &mdash; Códigos HTTP, ResponseEntity e DTOs</a>
+        <a class="grad-btn" href="questionario-a05-02.html" style="background:linear-gradient(270deg,#00c896 0%,#00a0cc 100%)">&#x1F4CB; Quiz 02 &mdash; Exceções, @ControllerAdvice e Camadas</a>
+        <a class="grad-btn" href="questionario-a05-03.html" style="background:linear-gradient(270deg,#cba6f7 0%,#8d62ff 100%)">&#x1F6E0; Implementação &mdash; Erros Padronizados e DTOs no Task Manager</a>
+      </div>
+    </div>
+  </div><!-- /questionarios1 -->
+
+  <!-- ═══ CURIOSIDADES ═══ -->
+  <div id="curiosidades1" class="section">
+    <div class="card">
+      <div class="card-title">&#x1F680; Curiosidades sobre Status HTTP, Erros e DTOs</div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1FAD6;</div>
+        <div>
+          <div class="curi-title">418 I'm a teapot</div>
+          <div class="curi-body">O código <code>418</code> nasceu de uma piada de 1º de abril: a <strong>RFC 2324</strong> (1998) definiu o protocolo HTCPCP, para controlar cafeteiras, e um bule de chá que recebe um pedido de café responde "I'm a teapot". O código nunca virou parte do HTTP, mas a RFC 9110 o deixou <strong>reservado</strong> justamente porque muita gente o implementou de brincadeira.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F510;</div>
+        <div>
+          <div class="curi-title">401 "Unauthorized" quer dizer "não autenticado"</div>
+          <div class="curi-body">O nome é histórico e confunde: o 401 significa que faltam <strong>credenciais</strong> válidas (quem é você?), e a especificação exige que a resposta traga o cabeçalho <code>WWW-Authenticate</code>. Falta de <strong>permissão</strong> (sei quem você é, mas não pode) é o <code>403 Forbidden</code>. Os dois voltam na aula 14, com JWT.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F4DA;</div>
+        <div>
+          <div class="curi-title">DTO é um padrão catalogado</div>
+          <div class="curi-body">O <strong>Data Transfer Object</strong> está no livro <em>Patterns of Enterprise Application Architecture</em>, de <strong>Martin Fowler</strong> (2002). A motivação original era juntar vários dados em um único objeto para economizar chamadas remotas. Hoje o uso mais comum é o do slide: definir o contrato da API, separado da entidade.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F9FE;</div>
+        <div>
+          <div class="curi-title">De onde vem o JSON de erro padrão do Spring Boot</div>
+          <div class="curi-body">Aquele corpo com <code>timestamp</code>, <code>status</code>, <code>error</code> e <code>path</code> é montado pelo <strong>BasicErrorController</strong>, que o Spring Boot registra no caminho <code>/error</code>. Quando uma exceção não é tratada, o servidor encaminha a requisição para lá. Com o <code>@ControllerAdvice</code>, a exceção é resolvida antes e esse corpo padrão não aparece.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F4DC;</div>
+        <div>
+          <div class="curi-title">Existe uma RFC para corpo de erro</div>
+          <div class="curi-body">A <strong>RFC 9457</strong> (2023, substituta da RFC 7807) define o formato <em>Problem Details</em> (<code>application/problem+json</code>), com campos como <code>type</code>, <code>title</code>, <code>status</code> e <code>detail</code>. O Spring 6 traz a classe <code>ProblemDetail</code> para isso. No Task Manager usamos um <code>ErrorResponse</code> próprio, como pede o planejamento: a ideia é a mesma, um corpo de erro padronizado.</div>
+        </div>
+      </div>
+
+      <div class="curi-item">
+        <div class="curi-icon">&#x1F570;</div>
+        <div>
+          <div class="curi-title">@ControllerAdvice e @RestControllerAdvice</div>
+          <div class="curi-body">O <code>@ControllerAdvice</code> chegou no <strong>Spring 3.2</strong> (2012). O <code>@RestControllerAdvice</code>, do <strong>Spring 4.3</strong>, é só um atalho: <code>@ControllerAdvice</code> + <code>@ResponseBody</code>. Como nossos handlers devolvem <code>ResponseEntity</code>, que já é escrita no corpo da resposta, os dois funcionam igual aqui.</div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /curiosidades1 -->
+
+  <!-- ═══ LINKS ═══ -->
+  <div id="links1" class="section">
+    <div class="card">
+      <div class="card-title">&#x1F517; Links Úteis</div>
+      <div style="display:flex;flex-direction:column;gap:14px;margin-top:4px">
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x23EA; Assunto Anterior</div>
+          <a class="link-item" href="../assunto04/index.html">Assunto 04 &mdash; Fundamentos de Web Services e Operações CRUD com REST e Spring Boot</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x23E9; Próximo Assunto</div>
+          <a class="link-item" href="../index.html#assunto06">Assunto 06 &mdash; Integração com Banco de Dados e DTOs e Boas Práticas e Padrões RESTful (disponível em 01/12)</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4CE; Citado no Slide &mdash; Prática: CRUD Completo com DTOs e Serviços</div>
+          <a class="link-item" href="https://docs.google.com/document/d/15C806w6ZE2QLgHlxzWS3LyV1FZhS7BZO/edit?usp=drive_link&amp;ouid=112760648001154419284&amp;rtpof=true&amp;sd=true" target="_blank">Documento da prática (Google Docs)</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F6E0; Task Manager API &mdash; Repositório da Turma</div>
+          <a class="link-item" href="https://github.com/irede-java-c2/taskmanager-api" target="_blank">https://github.com/irede-java-c2/taskmanager-api</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F3F7; Código das Aulas</div>
+          <span class="link-item" style="color:var(--muted)">aula-09 &mdash; ErrorResponse, exceções customizadas e GlobalExceptionHandler (disponível após a aula)</span><br/>
+          <span class="link-item" style="color:var(--muted)">aula-10 &mdash; DTOs de tarefa e usuário, sem @JsonIgnore (disponível após a aula)</span>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F343; Spring Framework &mdash; ResponseEntity</div>
+          <a class="link-item" href="https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/responseentity.html" target="_blank">https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/responseentity.html</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F343; Spring Framework &mdash; @ExceptionHandler e Controller Advice</div>
+          <a class="link-item" href="https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-exceptionhandler.html" target="_blank">https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-exceptionhandler.html</a><br/>
+          <a class="link-item" href="https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-advice.html" target="_blank">https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-advice.html</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F343; Spring Boot &mdash; Tratamento de Erros (Servlet Web Applications)</div>
+          <a class="link-item" href="https://docs.spring.io/spring-boot/reference/web/servlet.html" target="_blank">https://docs.spring.io/spring-boot/reference/web/servlet.html</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4D6; MDN &mdash; Códigos de Status de Respostas HTTP</div>
+          <a class="link-item" href="https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status" target="_blank">https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F4DC; RFC 9110 &mdash; HTTP Semantics (status codes)</div>
+          <a class="link-item" href="https://www.rfc-editor.org/rfc/rfc9110" target="_blank">https://www.rfc-editor.org/rfc/rfc9110</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F916; ModelMapper &mdash; Getting Started</div>
+          <a class="link-item" href="https://modelmapper.org/getting-started/" target="_blank">https://modelmapper.org/getting-started/</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">&#x1F9EA; Baeldung &mdash; Tratamento de Erros em REST e Entidade &harr; DTO</div>
+          <a class="link-item" href="https://www.baeldung.com/exception-handling-for-rest-with-spring" target="_blank">https://www.baeldung.com/exception-handling-for-rest-with-spring</a><br/>
+          <a class="link-item" href="https://www.baeldung.com/entity-to-and-from-dto-for-a-java-spring-application" target="_blank">https://www.baeldung.com/entity-to-and-from-dto-for-a-java-spring-application</a>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">&#x1F468;&#x200D;&#x1F3EB; Instrutor das Aulas 09 e 10</div>
+          <a href="https://github.com/davsilvam" target="_blank" style="display:inline-flex;align-items:center;gap:12px;padding:10px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);text-decoration:none">
+            <img src="https://avatars.githubusercontent.com/u/101468533?v=4" alt="David Silva" width="44" height="44" style="border-radius:50%;border:2px solid rgba(141,98,255,.35)"/>
+            <span>
+              <span style="display:block;font-size:14px;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace">David Silva</span>
+              <span style="display:block;font-size:12px;color:var(--accent);font-family:'JetBrains Mono',monospace">github.com/davsilvam</span>
+            </span>
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </div><!-- /links1 -->
+
+  </div><!-- /aula01 -->
+
+</div><!-- /wrap -->
+
+<footer>
+  Capacita Brasil &mdash; <span>iRede</span> &mdash; Material Interativo de Java
+</footer>
+
+<script>
+function showTab(t, btn) {
+  document.querySelectorAll('#aula01 .section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('#aula01 .tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(t).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── Utilitários: respostas HTTP como no Postman ── */
+const CMT = s => '<span style="color:#6c7086">' + s + '</span>';
+const OUT = s => '<span style="color:#cdd6f4">' + s + '</span>';
+const INF = s => '<span style="color:#89dceb">' + s + '</span>';
+const ERR = s => '<span style="color:#f38ba8">' + s + '</span>';
+const HEAD = (status, data, extra) => (status.startsWith('2') ? '<span style="color:#a6e3a1">' : '<span style="color:#f38ba8">') + 'HTTP/1.1 ' + status + '</span>\n'
+  + (extra || '') + 'Date: ' + data + ' GMT\n';
+const JSON_CT = 'Content-Type: application/json\n';
+const DIA09 = 'Tue, 24 Nov 2026 22:12:30';
+const DIA10 = 'Thu, 26 Nov 2026 22:08:17';
+
+const JSON_T1 = `{
+  "id": 1,
+  "titulo": "Estudar JPA",
+  "descricao": "Revisar @Entity e @Id",
+  "concluida": false,
+  "prazo": "2026-11-05",
+  "prioridade": "ALTA",
+  "etiquetas": [ { "id": 1, "nome": "Estudo" }, { "id": 3, "nome": "Urgente" } ]
+}`;
+const JSON_T9 = `{
+  "id": 9,
+  "titulo": "Revisar exceções",
+  "descricao": "Criar o GlobalExceptionHandler",
+  "concluida": false,
+  "prazo": "2026-11-26",
+  "prioridade": "ALTA",
+  "etiquetas": [ ]
+}`;
+const JSON_DTO1 = `{
+  "id": 1,
+  "titulo": "Estudar JPA",
+  "descricao": "Revisar @Entity e @Id",
+  "prioridade": "ALTA",
+  "prazo": "2026-11-05",
+  "concluida": false,
+  "usuarioId": 1
+}`;
+const ERRO_500_99 = `{
+  "timestamp": "2026-11-24T22:12:30.481+00:00",
+  "status": 500,
+  "error": "Internal Server Error",
+  "path": "/api/v1/tarefas/99"
+}`;
+const ERRO_404_99 = `{
+  "timestamp": "2026-11-24T19:12:30.481",
+  "status": 404,
+  "erro": "Não encontrado",
+  "mensagem": "Tarefa com id 99 não encontrada",
+  "caminho": "/api/v1/tarefas/99"
+}`;
+const ERRO_400 = `{
+  "timestamp": "2026-11-24T19:15:02.117",
+  "status": 400,
+  "erro": "Dados inválidos",
+  "mensagem": "titulo: O título deve ter no mínimo 3 caracteres; prioridade: A prioridade é obrigatória",
+  "caminho": "/api/v1/tarefas"
+}`;
+const LOG_500 = ERR('ERROR 21436 --- [taskmanager-api] [nio-8080-exec-3] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: java.lang.RuntimeException: Não encontrado!] with root cause');
+
+/* ── Simulador 1: Antes × Depois ── */
+const AD_OPS = {
+  get99: {
+    req: `<span class="kw">GET</span> {{baseUrl}}/tarefas/99`,
+    antesCode: `<span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)
+<span class="kw">public</span> <span class="cls">Tarefa</span> <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    <span class="kw">return</span> repository.<span class="mtd">findById</span>(id)
+            .<span class="mtd">orElseThrow</span>(() -&gt; <span class="kw">new</span> <span class="typ">RuntimeException</span>(<span class="str">"Não encontrado!"</span>)); <span class="cmt">// Estoura 500!</span>
+}`,
+    antesResp: HEAD('500 Internal Server Error', DIA09, JSON_CT) + '\n' + ERRO_500_99 + '\n\n' + CMT('// console do servidor:') + '\n' + LOG_500,
+    depoisCode: `<span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)
+<span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    <span class="typ">Optional</span>&lt;<span class="cls">Tarefa</span>&gt; tarefa = repository.<span class="mtd">findById</span>(id);
+    <span class="kw">if</span> (tarefa.<span class="mtd">isPresent</span>()) {
+        <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">ok</span>(tarefa.<span class="mtd">get</span>());     <span class="cmt">// 200 OK</span>
+    } <span class="kw">else</span> {
+        <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">notFound</span>().<span class="mtd">build</span>();   <span class="cmt">// 404 Not Found</span>
+    }
+}`,
+    depoisResp: HEAD('404 Not Found', DIA09) + CMT('\n(sem corpo)'),
+    desc: '&#x1F539; Antes, a mensagem "Não encontrado!" fica só no console do servidor: o cliente recebe um 500 genérico, como se a API tivesse quebrado. Depois, o 404 diz a verdade ("esse recurso não existe"), mas ainda sem corpo explicando o motivo. O ErrorResponse do simulador seguinte resolve essa parte.'
+  },
+  post: {
+    req: `<span class="kw">POST</span> {{baseUrl}}/tarefas?usuarioId=1
+Content-Type: application/json
+
+{
+  <span class="mtd">"titulo"</span>: <span class="str">"Revisar exceções"</span>,
+  <span class="mtd">"descricao"</span>: <span class="str">"Criar o GlobalExceptionHandler"</span>,
+  <span class="mtd">"prazo"</span>: <span class="str">"2026-11-26"</span>,
+  <span class="mtd">"prioridade"</span>: <span class="str">"ALTA"</span>
+}`,
+    antesCode: `<span class="ann">@PostMapping</span>
+<span class="kw">public</span> <span class="cls">Tarefa</span> <span class="mtd">criar</span>(<span class="ann">@RequestBody</span> <span class="cls">Tarefa</span> tarefa, <span class="ann">@RequestParam</span> <span class="typ">Long</span> usuarioId) {
+    tarefa.<span class="mtd">setUsuario</span>(usuarioRepository.<span class="mtd">findById</span>(usuarioId).<span class="mtd">orElseThrow</span>());
+    <span class="kw">return</span> repository.<span class="mtd">save</span>(tarefa); <span class="cmt">// Retorna 200 OK</span>
+}`,
+    antesResp: HEAD('200 OK', DIA09, JSON_CT) + '\n' + JSON_T9,
+    depoisCode: `<span class="ann">@PostMapping</span>
+<span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">criar</span>(<span class="ann">@Valid</span> <span class="ann">@RequestBody</span> <span class="cls">Tarefa</span> tarefa, <span class="ann">@RequestParam</span> <span class="typ">Long</span> usuarioId) {
+    tarefa.<span class="mtd">setUsuario</span>(usuarioRepository.<span class="mtd">findById</span>(usuarioId).<span class="mtd">orElseThrow</span>());
+    <span class="cls">Tarefa</span> tarefaSalva = repository.<span class="mtd">save</span>(tarefa);
+
+    <span class="cmt">// Boa prática: Retornar a URI do novo recurso no cabeçalho "Location"</span>
+    <span class="typ">URI</span> location = <span class="typ">URI</span>.<span class="mtd">create</span>(<span class="str">"/api/v1/tarefas/"</span> + tarefaSalva.<span class="mtd">getId</span>());
+    <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">created</span>(location).<span class="mtd">body</span>(tarefaSalva); <span class="cmt">// Retorna 201 Created</span>
+}`,
+    depoisResp: HEAD('201 Created', DIA09, 'Location: /api/v1/tarefas/9\n' + JSON_CT) + '\n' + JSON_T9,
+    desc: '&#x1F539; O corpo é o mesmo nos dois casos. O que muda é a semântica: <strong>201 Created</strong> avisa que um recurso novo nasceu, e o cabeçalho <strong>Location</strong> diz onde ele mora. No Postman, veja a aba Headers: um GET em /api/v1/tarefas/9 devolve exatamente essa tarefa.'
+  },
+  del8: {
+    req: `<span class="kw">DELETE</span> {{baseUrl}}/tarefas/8`,
+    antesCode: `<span class="ann">@DeleteMapping</span>(<span class="str">"/{id}"</span>)
+<span class="ann">@ResponseStatus</span>(<span class="typ">HttpStatus</span>.OK) <span class="cmt">// Não é o ideal</span>
+<span class="kw">public void</span> <span class="mtd">remover</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    repository.<span class="mtd">deleteById</span>(id); <span class="cmt">// Retorna 200 OK com corpo vazio</span>
+}`,
+    antesResp: HEAD('200 OK', DIA09, 'Content-Length: 0\n'),
+    depoisCode: `<span class="ann">@DeleteMapping</span>(<span class="str">"/{id}"</span>)
+<span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="typ">Void</span>&gt; <span class="mtd">remover</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    <span class="kw">if</span> (!repository.<span class="mtd">existsById</span>(id)) {
+        <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">notFound</span>().<span class="mtd">build</span>(); <span class="cmt">// Retorna 404 se não existir</span>
+    }
+    repository.<span class="mtd">deleteById</span>(id);
+    <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">noContent</span>().<span class="mtd">build</span>(); <span class="cmt">// Retorna 204 No Content</span>
+}`,
+    depoisResp: HEAD('204 No Content', DIA09),
+    desc: '&#x1F539; A tarefa 8 existe, então as duas versões apagam. Mas 200 OK com corpo vazio é estranho: "OK, e cadê o conteúdo?". O <strong>204 No Content</strong> diz exatamente o que aconteceu: deu certo e não há nada para devolver. O ResponseEntity&lt;Void&gt; deixa isso explícito no código.'
+  },
+  del99: {
+    req: `<span class="kw">DELETE</span> {{baseUrl}}/tarefas/99`,
+    antesCode: `<span class="ann">@DeleteMapping</span>(<span class="str">"/{id}"</span>)
+<span class="ann">@ResponseStatus</span>(<span class="typ">HttpStatus</span>.OK) <span class="cmt">// Não é o ideal</span>
+<span class="kw">public void</span> <span class="mtd">remover</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    repository.<span class="mtd">deleteById</span>(id);
+}`,
+    antesResp: HEAD('200 OK', DIA09, 'Content-Length: 0\n') + '\n' + CMT('// nada foi apagado, mas o cliente acha que deu certo!'),
+    depoisCode: `<span class="ann">@DeleteMapping</span>(<span class="str">"/{id}"</span>)
+<span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="typ">Void</span>&gt; <span class="mtd">remover</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    <span class="kw">if</span> (!repository.<span class="mtd">existsById</span>(id)) {
+        <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">notFound</span>().<span class="mtd">build</span>(); <span class="cmt">// Retorna 404 se não existir</span>
+    }
+    repository.<span class="mtd">deleteById</span>(id);
+    <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">noContent</span>().<span class="mtd">build</span>();
+}`,
+    depoisResp: HEAD('404 Not Found', DIA09) + CMT('\n(sem corpo)'),
+    desc: '&#x1F539; Pegadinha: no Spring Data 3, <span class="ic">deleteById</span> de um id que não existe <strong>não lança exceção</strong>, só não faz nada. Por isso a versão "antes" responde 200 para a tarefa 99. O <span class="ic">existsById</span> do slide transforma esse silêncio em um 404 honesto.'
+  }
+};
+
+function runAD(op, btn) {
+  document.querySelectorAll('#adOps .type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const data = AD_OPS[op];
+  document.getElementById('adReq').innerHTML = data.req;
+  document.getElementById('adAntesCode').innerHTML = data.antesCode;
+  document.getElementById('adAntesResp').innerHTML = data.antesResp;
+  document.getElementById('adDepoisCode').innerHTML = data.depoisCode;
+  document.getElementById('adDepoisResp').innerHTML = data.depoisResp;
+  document.getElementById('adDesc').innerHTML = data.desc;
+}
+
+/* ── Simulador 2: O caminho de uma exceção ── */
+const EXC_HANDLER_NF = `<span class="ann">@ControllerAdvice</span>
+<span class="kw">public class</span> <span class="cls">GlobalExceptionHandler</span> {
+
+    <span class="ann">@ExceptionHandler</span>(<span class="cls">ResourceNotFoundException</span>.<span class="kw">class</span>)   <span class="cmt">// ◀ escolhido pelo tipo</span>
+    <span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">ErrorResponse</span>&gt; <span class="mtd">handleNotFound</span>(<span class="cls">ResourceNotFoundException</span> ex,
+                                                        <span class="typ">HttpServletRequest</span> request) { ... }
+
+    <span class="ann">@ExceptionHandler</span>(<span class="typ">MethodArgumentNotValidException</span>.<span class="kw">class</span>)
+    <span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">ErrorResponse</span>&gt; <span class="mtd">handleValidacao</span>(...) { ... }
+}`;
+const EXC_HANDLER_VAL = `<span class="ann">@ControllerAdvice</span>
+<span class="kw">public class</span> <span class="cls">GlobalExceptionHandler</span> {
+
+    <span class="ann">@ExceptionHandler</span>(<span class="cls">ResourceNotFoundException</span>.<span class="kw">class</span>)
+    <span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">ErrorResponse</span>&gt; <span class="mtd">handleNotFound</span>(...) { ... }
+
+    <span class="ann">@ExceptionHandler</span>(<span class="typ">MethodArgumentNotValidException</span>.<span class="kw">class</span>)   <span class="cmt">// ◀ escolhido pelo tipo</span>
+    <span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">ErrorResponse</span>&gt; <span class="mtd">handleValidacao</span>(<span class="typ">MethodArgumentNotValidException</span> ex,
+                                                         <span class="typ">HttpServletRequest</span> request) { ... }
+}`;
+const EXC_STEPS = {
+  nf: [
+    {
+      code: `<span class="kw">GET</span> {{baseUrl}}/tarefas/99`,
+      label: 'DispatcherServlet',
+      out: OUT('GET /api/v1/tarefas/99') + '\n  → ' + INF('TarefaController#buscarPorId(Long)') + '\n    id = 99',
+      desc: '&#x1F539; O Postman envia a requisição. O <strong>DispatcherServlet</strong> do Spring encontra o método mapeado com <span class="ic">@GetMapping("/{id}")</span> e converte o "99" da URI no <span class="ic">Long id</span>.'
+    },
+    {
+      code: `<span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)
+<span class="kw">public</span> <span class="cls">Tarefa</span> <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    <span class="cmt">// Código limpo! Focado na regra de negócio.</span>
+    <span class="kw">return</span> repository.<span class="mtd">findById</span>(id)
+            .<span class="mtd">orElseThrow</span>(() -&gt; <span class="kw">new</span> <span class="cls">ResourceNotFoundException</span>(<span class="str">"Tarefa com id "</span> + id + <span class="str">" não encontrada"</span>));
+}`,
+      label: 'Console',
+      out: `Hibernate:
+    select
+        t1_0.id,
+        ...
+    from
+        tarefas t1_0
+    where
+        t1_0.id=?
+` + OUT('Optional.empty → orElseThrow → ') + ERR('throw new ResourceNotFoundException(...)'),
+      desc: '&#x1F539; O controlador faz só a regra: busca e, se não achar, <strong>lança</strong> a exceção. Nenhuma linha de HTTP aqui: nem status, nem corpo de erro.'
+    },
+    {
+      code: `<span class="cmt">// Nenhum try/catch no controlador:</span>
+<span class="cmt">// a exceção sobe para quem chamou o método, o próprio Spring MVC.</span>`,
+      label: 'Pilha de chamadas',
+      out: ERR('br.org.irede.taskmanagerapi.exception.ResourceNotFoundException: Tarefa com id 99 não encontrada') + `
+    at TarefaController.lambda$buscarPorId$0(TarefaController.java:38)
+    at java.base/java.util.Optional.orElseThrow(Optional.java:403)
+    at TarefaController.buscarPorId(TarefaController.java:37)
+    ...
+` + INF('→ Spring MVC procura um @ExceptionHandler para ResourceNotFoundException'),
+      desc: '&#x1F539; Como <span class="ic">ResourceNotFoundException</span> estende <span class="ic">RuntimeException</span>, ela não precisa de <span class="ic">throws</span> e sobe livremente. Antes do <span class="ic">@ControllerAdvice</span>, era aqui que ela virava um 500.'
+    },
+    {
+      code: EXC_HANDLER_NF,
+      label: 'Resolução',
+      out: INF('ExceptionHandlerExceptionResolver') + '\n  → GlobalExceptionHandler#handleNotFound(ResourceNotFoundException, HttpServletRequest)',
+      desc: '&#x1F539; O <span class="ic">@ControllerAdvice</span> "escuta" as exceções de <strong>todos</strong> os controladores. Entre os <span class="ic">@ExceptionHandler</span>, o Spring escolhe o que declara o <strong>tipo</strong> da exceção lançada: <span class="ic">ResourceNotFoundException.class</span>.'
+    },
+    {
+      code: `<span class="cls">ErrorResponse</span> erro = <span class="kw">new</span> <span class="cls">ErrorResponse</span>(<span class="num">404</span>, <span class="str">"Não encontrado"</span>,
+        ex.<span class="mtd">getMessage</span>(), request.<span class="mtd">getRequestURI</span>());
+<span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">status</span>(<span class="typ">HttpStatus</span>.NOT_FOUND).<span class="mtd">body</span>(erro);`,
+      label: 'Objeto montado',
+      out: OUT(`ErrorResponse {
+  timestamp = 2026-11-24T19:12:30.481
+  status    = 404
+  erro      = "Não encontrado"
+  mensagem  = "Tarefa com id 99 não encontrada"   ← ex.getMessage()
+  caminho   = "/api/v1/tarefas/99"                ← request.getRequestURI()
+}`),
+      desc: '&#x1F539; Aqui mora toda a "lógica de resposta HTTP" que saiu do controlador: o <strong>status</strong> (404) e o <strong>corpo</strong> (ErrorResponse). A mensagem é a mesma que o controlador passou ao lançar a exceção.'
+    },
+    {
+      code: `<span class="kw">GET</span> {{baseUrl}}/tarefas/99`,
+      label: 'Resposta no Postman',
+      out: HEAD('404 Not Found', DIA09, JSON_CT) + '\n' + ERRO_404_99,
+      desc: '&#x1F539; O cliente agora sabe <strong>o que</strong> deu errado (status 404), <strong>por quê</strong> (mensagem) e <strong>onde</strong> (caminho). E qualquer outro método que lance <span class="ic">ResourceNotFoundException</span> (PUT, DELETE, POST com usuário inexistente) ganha a mesma resposta, sem uma linha a mais.'
+    }
+  ],
+  val: [
+    {
+      code: `<span class="kw">POST</span> {{baseUrl}}/tarefas?usuarioId=1
+Content-Type: application/json
+
+{
+  <span class="mtd">"titulo"</span>: <span class="str">"Ok"</span>,
+  <span class="mtd">"prioridade"</span>: <span class="kw">null</span>
+}`,
+      label: 'DispatcherServlet',
+      out: OUT('POST /api/v1/tarefas?usuarioId=1') + '\n  → ' + INF('TarefaController#criar(Tarefa, Long)') + '\n    @RequestBody: JSON → objeto Tarefa',
+      desc: '&#x1F539; Um POST com dois problemas: título curto demais e prioridade nula. O Jackson converte o JSON no objeto do parâmetro <span class="ic">@RequestBody</span>.'
+    },
+    {
+      code: `<span class="ann">@PostMapping</span>
+<span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">Tarefa</span>&gt; <span class="mtd">criar</span>(<span class="ann">@Valid</span> <span class="ann">@RequestBody</span> <span class="cls">Tarefa</span> tarefa,
+                                    <span class="ann">@RequestParam</span> <span class="typ">Long</span> usuarioId) {
+    <span class="cmt">// ... este código NÃO chega a executar</span>
+}`,
+      label: 'Bean Validation (@Valid)',
+      out: OUT('titulo     = "Ok"  ') + ERR('✗ @Size(min = 3): O título deve ter no mínimo 3 caracteres') + '\n' +
+           OUT('prioridade = null  ') + ERR('✗ @NotNull: A prioridade é obrigatória') + '\n' +
+           INF('→ 2 erros: o método criar() não é chamado'),
+      desc: '&#x1F539; O <span class="ic">@Valid</span> roda as regras <strong>antes</strong> de entrar no método. Com qualquer violação, o Spring nem chama o <span class="ic">criar</span>: nada é salvo e nenhum SQL é executado.'
+    },
+    {
+      code: `<span class="cmt">// Quem lança a exceção é o próprio Spring MVC,</span>
+<span class="cmt">// ao processar o parâmetro anotado com @Valid @RequestBody.</span>`,
+      label: 'Exceção',
+      out: ERR('org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public org.springframework.http.ResponseEntity&lt;...Tarefa&gt; ...TarefaController.criar(...) with 2 errors') + '\n' +
+           INF('→ Spring MVC procura um @ExceptionHandler para MethodArgumentNotValidException'),
+      desc: '&#x1F539; Na aula 08, sem handler, essa exceção virava o 400 padrão do Spring Boot, com as mensagens <strong>só no log</strong>. Agora ela segue o mesmo caminho da ResourceNotFoundException.'
+    },
+    {
+      code: EXC_HANDLER_VAL,
+      label: 'Resolução',
+      out: INF('ExceptionHandlerExceptionResolver') + '\n  → GlobalExceptionHandler#handleValidacao(MethodArgumentNotValidException, HttpServletRequest)',
+      desc: '&#x1F539; Mesmo <span class="ic">@ControllerAdvice</span>, outro <span class="ic">@ExceptionHandler</span>: cada tipo de exceção tem o seu método, e todos devolvem o mesmo formato de corpo.'
+    },
+    {
+      code: `<span class="typ">String</span> mensagem = ex.<span class="mtd">getBindingResult</span>().<span class="mtd">getFieldErrors</span>().<span class="mtd">stream</span>()
+        .<span class="mtd">map</span>(e -&gt; e.<span class="mtd">getField</span>() + <span class="str">": "</span> + e.<span class="mtd">getDefaultMessage</span>())
+        .<span class="mtd">collect</span>(<span class="typ">Collectors</span>.<span class="mtd">joining</span>(<span class="str">"; "</span>));
+<span class="cls">ErrorResponse</span> erro = <span class="kw">new</span> <span class="cls">ErrorResponse</span>(<span class="num">400</span>, <span class="str">"Dados inválidos"</span>, mensagem, request.<span class="mtd">getRequestURI</span>());
+<span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">badRequest</span>().<span class="mtd">body</span>(erro);`,
+      label: 'Objeto montado',
+      out: OUT(`getFieldErrors():
+  [0] field = "titulo",     defaultMessage = "O título deve ter no mínimo 3 caracteres"
+  [1] field = "prioridade", defaultMessage = "A prioridade é obrigatória"
+
+mensagem = "titulo: O título deve ter no mínimo 3 caracteres; prioridade: A prioridade é obrigatória"`),
+      desc: '&#x1F539; Cada violação vira um <span class="ic">FieldError</span> com o nome do campo e a mensagem escrita na anotação (<span class="ic">message = "..."</span>). O stream junta tudo em uma frase. A ordem dos erros não é garantida.'
+    },
+    {
+      code: `<span class="kw">POST</span> {{baseUrl}}/tarefas?usuarioId=1`,
+      label: 'Resposta no Postman',
+      out: HEAD('400 Bad Request', DIA09, JSON_CT) + '\n' + ERRO_400,
+      desc: '&#x1F539; É o 400 da tabela de códigos: "falhas de validação". Agora o frontend pode mostrar ao usuário exatamente o que corrigir, sem ninguém precisar abrir o console do servidor.'
+    }
+  ]
+};
+let excCenario = 'nf';
+
+function setExcCenario(c, btn) {
+  document.querySelectorAll('#excOps .type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  excCenario = c;
+  setExcStep(0, document.querySelectorAll('#excStepper .step-btn')[0]);
+}
+
+function setExcStep(i, btn) {
+  document.querySelectorAll('#excStepper .step-btn').forEach((b, idx) => {
+    b.classList.remove('active');
+    if (idx < i) b.classList.add('past'); else b.classList.remove('past');
+  });
+  btn.classList.add('active');
+  const s = EXC_STEPS[excCenario][i];
+  document.getElementById('excCode').innerHTML = s.code;
+  document.getElementById('excOutLabel').textContent = s.label;
+  document.getElementById('excOut').innerHTML = s.out;
+  document.getElementById('excDesc').innerHTML = s.desc;
+}
+
+/* ── Simulador 3: Entidade × DTO ── */
+const CTRL_ENTIDADE = `<span class="cmt">// TarefaController</span>
+<span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)
+<span class="kw">public</span> <span class="cls">Tarefa</span> <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    <span class="kw">return</span> repository.<span class="mtd">findById</span>(id).<span class="mtd">orElseThrow</span>(...);   <span class="cmt">// devolve a ENTIDADE</span>
+}`;
+const DTO_OPS = {
+  proxy: {
+    code: `<span class="cmt">// Tarefa.java</span>
+<span class="ann">@ManyToOne</span>(fetch = <span class="typ">FetchType</span>.LAZY)            <span class="cmt">// sem @JsonIgnore</span>
+<span class="ann">@JoinColumn</span>(name = <span class="str">"usuario_id"</span>, nullable = <span class="kw">false</span>)
+<span class="kw">private</span> <span class="cls">Usuario</span> usuario;
+
+${CTRL_ENTIDADE}`,
+    resp: HEAD('500 Internal Server Error', DIA10, JSON_CT) + `
+{
+  "timestamp": "2026-11-26T22:08:17.552+00:00",
+  "status": 500,
+  "error": "Internal Server Error",
+  "path": "/api/v1/tarefas/1"
+}
+
+` + CMT('// console do servidor:') + '\n' + ERR('ERROR ... [dispatcherServlet] : Servlet.service() ... threw exception [Request processing failed: org.springframework.http.converter.HttpMessageConversionException: Type definition error: [simple type, class org.hibernate.proxy.pojo.bytebuddy.ByteBuddyInterceptor]] with root cause'),
+    desc: '&#x1F539; Com LAZY, <span class="ic">tarefa.getUsuario()</span> é um <strong>proxy</strong> do Hibernate, não um Usuario de verdade. O Jackson tenta serializar o proxy, encontra o objeto interno <span class="ic">ByteBuddyInterceptor</span> e desiste. Foi por isso que a aula 08 colocou o <span class="ic">@JsonIgnore</span>.'
+  },
+  senha: {
+    code: `<span class="cmt">// Mesmo sem @JsonIgnore, mas com o usuário já carregado</span>
+<span class="cmt">// (ex.: uma consulta com JOIN FETCH t.usuario)</span>
+${CTRL_ENTIDADE}`,
+    resp: CMT('// o que o Jackson começa a escrever:') + `
+{
+  "id": 1,
+  "titulo": "Estudar JPA",
+  ...
+  "usuario": {
+    "id": 1,
+    "nome": "Ana Souza",
+    "email": "ana@email.com",
+    ` + ERR('"senha": "123456",') + `
+    "tarefas": [ {
+      "id": 1,
+      "titulo": "Estudar JPA",
+      ...
+      "usuario": {
+        "id": 1,
+        ` + ERR('"senha": "123456",') + `
+        "tarefas": [ { ... ` + CMT('// e assim por diante') + `
+
+` + CMT('// console do servidor:') + '\n' + ERR('WARN ... Resolved [org.springframework.http.converter.HttpMessageNotWritableException: Could not write JSON: Document nesting depth (1001) exceeds the maximum allowed (1000, from `StreamWriteConstraints.getMaxNestingDepth()`)]'),
+    desc: '&#x1F539; Dois problemas de uma vez: a <strong>senha</strong> do usuário vaza no JSON, e a relação bidirecional <span class="ic">Usuario.tarefas &harr; Tarefa.usuario</span> vira uma <strong>recursão infinita</strong>, até o Jackson atingir o limite de profundidade. A entidade foi feita para o banco, não para a API.'
+  },
+  ignore: {
+    code: `<span class="cmt">// Tarefa.java (estado da aula 08)</span>
+<span class="ann">@JsonIgnore</span>
+<span class="ann">@ManyToOne</span>(fetch = <span class="typ">FetchType</span>.LAZY)
+<span class="ann">@JoinColumn</span>(name = <span class="str">"usuario_id"</span>, nullable = <span class="kw">false</span>)
+<span class="kw">private</span> <span class="cls">Usuario</span> usuario;
+
+${CTRL_ENTIDADE}`,
+    resp: HEAD('200 OK', DIA10, JSON_CT) + '\n' + JSON_T1,
+    desc: '&#x1F539; Funciona, mas é um <strong>paliativo</strong>: o cliente não sabe de quem é a tarefa, o mapeamento do banco (anotação de JPA) se mistura com o formato do JSON (anotação do Jackson), e qualquer atributo novo na entidade aparece na API sem ninguém decidir.'
+  },
+  dto: {
+    code: `<span class="cmt">// TarefaController (aula 10)</span>
+<span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)
+<span class="kw">public</span> <span class="cls">TarefaDTO</span> <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    <span class="cls">Tarefa</span> tarefa = repository.<span class="mtd">findById</span>(id)
+            .<span class="mtd">orElseThrow</span>(() -&gt; <span class="kw">new</span> <span class="cls">ResourceNotFoundException</span>(<span class="str">"Tarefa com id "</span> + id + <span class="str">" não encontrada"</span>));
+    <span class="kw">return</span> <span class="mtd">converterParaDto</span>(tarefa);
+}
+
+<span class="kw">private</span> <span class="cls">TarefaDTO</span> <span class="mtd">converterParaDto</span>(<span class="cls">Tarefa</span> tarefa) {
+    <span class="cls">TarefaDTO</span> dto = <span class="kw">new</span> <span class="cls">TarefaDTO</span>();
+    dto.<span class="mtd">setId</span>(tarefa.<span class="mtd">getId</span>());
+    dto.<span class="mtd">setTitulo</span>(tarefa.<span class="mtd">getTitulo</span>());
+    <span class="cmt">// ... descricao, prioridade, prazo, concluida</span>
+    dto.<span class="mtd">setUsuarioId</span>(tarefa.<span class="mtd">getUsuario</span>().<span class="mtd">getId</span>());
+    <span class="kw">return</span> dto;
+}`,
+    resp: HEAD('200 OK', DIA10, JSON_CT) + '\n' + JSON_DTO1,
+    desc: '&#x1F539; O JSON agora é o <strong>contrato</strong> que você escreveu no TarefaDTO: o dono aparece como <span class="ic">usuarioId</span>, sem senha, sem proxy e sem recursão. O <span class="ic">@JsonIgnore</span> pode sair da entidade. As etiquetas ficaram fora deste contrato: o DTO mostra só o que você decide.'
+  },
+  usuario: {
+    code: `<span class="cmt">// UsuarioController (aula 10)</span>
+<span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)
+<span class="kw">public</span> <span class="cls">UsuarioDTO</span> <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    <span class="cls">Usuario</span> usuario = repository.<span class="mtd">findById</span>(id)
+            .<span class="mtd">orElseThrow</span>(() -&gt; <span class="kw">new</span> <span class="cls">ResourceNotFoundException</span>(<span class="str">"Usuário com id "</span> + id + <span class="str">" não encontrado"</span>));
+    <span class="kw">return</span> <span class="mtd">converterParaDto</span>(usuario);
+}
+
+<span class="kw">private</span> <span class="cls">UsuarioDTO</span> <span class="mtd">converterParaDto</span>(<span class="cls">Usuario</span> usuario) {
+    <span class="cls">UsuarioDTO</span> dto = <span class="kw">new</span> <span class="cls">UsuarioDTO</span>();
+    dto.<span class="mtd">setId</span>(usuario.<span class="mtd">getId</span>());
+    dto.<span class="mtd">setNome</span>(usuario.<span class="mtd">getNome</span>());
+    dto.<span class="mtd">setEmail</span>(usuario.<span class="mtd">getEmail</span>());
+    <span class="kw">return</span> dto;
+}`,
+    resp: CMT('GET {{baseUrl}}/usuarios/1') + '\n' + HEAD('200 OK', DIA10, JSON_CT) + `
+{
+  "id": 1,
+  "nome": "Ana Souza",
+  "email": "ana@email.com"
+}`,
+    desc: '&#x1F539; É o exemplo do slide ("Sem senha!") no Task Manager. A entidade <span class="ic">Usuario</span> continua tendo <span class="ic">senha</span> e <span class="ic">tarefas</span>, mas o DTO simplesmente não tem esses campos: não há como eles chegarem ao JSON, nem por engano.'
+  },
+  mapper: {
+    code: `<span class="cmt">// TarefaService (aula 11) — o slide já mostra este código</span>
+<span class="ann">@Autowired</span>
+<span class="kw">private</span> <span class="typ">ModelMapper</span> modelMapper; <span class="cmt">// Injeta o bean do AppConfig</span>
+
+<span class="kw">public</span> <span class="cls">TarefaDTO</span> <span class="mtd">buscarPorId</span>(<span class="typ">Long</span> id) {
+    <span class="cls">Tarefa</span> tarefa = repository.<span class="mtd">findById</span>(id).<span class="mtd">orElseThrow</span>(...);
+
+    <span class="cmt">// Mapeamento automático!</span>
+    <span class="kw">return</span> modelMapper.<span class="mtd">map</span>(tarefa, <span class="cls">TarefaDTO</span>.<span class="kw">class</span>);
+}`,
+    resp: HEAD('200 OK', DIA10, JSON_CT) + '\n' + JSON_DTO1,
+    desc: '&#x1F539; <strong>Mesma resposta</strong> do mapeamento manual, sem as linhas de <span class="ic">set</span>. O ModelMapper copia os atributos de nome igual e resolve <span class="ic">usuarioId</span> lendo <span class="ic">getUsuario().getId()</span>. Entra no Task Manager na aula 11, junto com a camada de serviço.'
+  }
+};
+
+function runDto(op, btn) {
+  document.querySelectorAll('#dtoOps .type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const data = DTO_OPS[op];
+  document.getElementById('dtoCode').innerHTML = data.code;
+  document.getElementById('dtoResp').innerHTML = data.resp;
+  document.getElementById('dtoDesc').innerHTML = data.desc;
+}
+
+function answer1(i, btn, isCorrect) {
+  const block = document.getElementById('ex1-' + i);
+  const fb = document.getElementById('fb1-' + i);
+  block.querySelectorAll('.choice').forEach(b => b.disabled = true);
+  if (isCorrect) {
+    btn.classList.add('correct');
+    block.classList.add('done');
+    fb.className = 'feedback show ok';
+    fb.textContent = '✓ Correto!';
+    window.score1 = (window.score1 || 0) + 1;
+  } else {
+    btn.classList.add('wrong');
+    fb.className = 'feedback show ko';
+    fb.textContent = '✗ Incorreto. Revise o resumo desta aula.';
+  }
+  document.getElementById('scoreVal1').textContent = window.score1 || 0;
+  document.getElementById('scoreBar1').style.width = ((window.score1 || 0) / 5 * 100) + '%';
+}
+</script>
+
+<script>
+window.addEventListener('DOMContentLoaded', function () {
+  runAD('get99', document.querySelector('#adOps .type-btn.active'));
+  setExcStep(0, document.querySelector('#excStepper .step-btn.active'));
+  runDto('proxy', document.querySelector('#dtoOps .type-btn.active'));
+});
+</script>
+</body>
+</html>
