@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Implementação — Services, ModelMapper e Rotas RESTful no Task Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:          #f0f0f5;
+  --surface:     #ffffff;
+  --border:      #d8d5e8;
+  --accent:      #8d62ff;
+  --accent2:     #00c896;
+  --text:        #1a1730;
+  --muted:       #7a748f;
+  --green:       #155e35;
+  --green-bg:    #d6f5e5;
+  --green-border:#6edaa8;
+  --radius:      10px;
+  --glow:        0 0 18px rgba(141,98,255,0.15);
+  --grad:        linear-gradient(270deg, #8d62ff 53.6%, #00ffbc 98.32%);
+  --surface2:    #f7f5ff;
+  --danger:      #d63030;
+  --warn:        #d48a00;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+  padding: 0 0 60px;
+  background-image:
+    radial-gradient(ellipse 70% 40% at 50% -10%, rgba(141,98,255,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 30% at 80% 110%, rgba(0,200,150,0.06) 0%, transparent 70%);
+}
+
+header {
+  text-align: center;
+  padding: 36px 20px 28px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  background: var(--surface);
+  box-shadow: 0 2px 16px rgba(141,98,255,0.07);
+}
+header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 2px;
+  background: linear-gradient(90deg, transparent, #8d62ff, transparent);
+}
+.header-logo { height: 48px; margin-bottom: 14px; display: block; margin-left: auto; margin-right: auto; }
+.logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+  font-weight: 700; letter-spacing: -0.5px;
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.logo span { opacity: 0.6; }
+.subtitle { color: var(--muted); font-size: .85rem; margin-top: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+.header-badge {
+  display: inline-block; margin-top: 12px; padding: 4px 16px; border-radius: 99px;
+  font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace;
+  background: linear-gradient(270deg, rgba(141,98,255,.15), rgba(0,255,188,.1));
+  border: 1px solid rgba(141,98,255,.3); color: var(--accent); letter-spacing: .06em;
+}
+
+.wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+.back-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--muted); font-size: 13px; text-decoration: none;
+  font-family: 'JetBrains Mono', monospace; margin-bottom: 1.5rem;
+  transition: color .15s;
+}
+.back-link:hover { color: var(--accent); }
+
+.info-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1.25rem 1.5rem; margin-bottom: 1.75rem;
+  box-shadow: 0 2px 8px rgba(141,98,255,0.06); position: relative; overflow: hidden;
+}
+.info-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(141,98,255,.35), transparent);
+}
+.info-card-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700;
+  margin-bottom: .6rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.info-card p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+.pill { display: inline-block; padding: 3px 11px; border-radius: 99px; font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.pill-grad  { background: rgba(141,98,255,.12); border: 1px solid rgba(141,98,255,.3);  color: var(--accent); }
+.pill-green { background: rgba(0,200,150,.12);  border: 1px solid rgba(0,200,150,.3);   color: #0a7a5a; }
+.pill-amber { background: rgba(212,138,0,.1);   border: 1px solid rgba(212,138,0,.25);  color: var(--warn); }
+.pill-red   { background: rgba(214,48,48,.1);   border: 1px solid rgba(214,48,48,.25);  color: var(--danger); }
+.pill-blue  { background: rgba(141,98,255,.12); border: 1px solid rgba(141,98,255,.25); color: #5a30cc; }
+
+.ex-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 1.5rem; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.ex-header {
+  padding: 1.1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: var(--surface2);
+}
+.ex-number {
+  font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700;
+  background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  min-width: 36px;
+}
+.ex-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: var(--text); flex: 1;
+}
+.ex-body { padding: 1.25rem 1.5rem; }
+.ex-enunciado {
+  font-size: 14px; color: var(--text); line-height: 1.75; margin-bottom: 1rem;
+}
+.ex-enunciado strong { color: var(--accent); }
+.ex-requisitos {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 16px; margin-bottom: 1.25rem;
+}
+.ex-requisitos-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  color: var(--muted); letter-spacing: .07em; text-transform: uppercase; margin-bottom: 10px;
+}
+.ex-requisitos ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.ex-requisitos li {
+  font-size: 13px; color: var(--muted); display: flex; align-items: flex-start; gap: 8px; line-height: 1.55;
+}
+.ex-requisitos li::before {
+  content: '›'; color: var(--accent); font-weight: 700; font-size: 16px;
+  line-height: 1; flex-shrink: 0; margin-top: 1px;
+}
+.ic { background: rgba(141,98,255,.12); color: #5a30cc; padding: 1px 6px; border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+
+.reveal-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 22px; border-radius: 8px; border: 1.5px solid var(--accent);
+  background: transparent; color: var(--accent);
+  cursor: pointer; font-size: 13px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  transition: all .2s; margin-bottom: 0;
+}
+.reveal-btn:hover { background: rgba(141,98,255,.1); transform: translateY(-1px); box-shadow: var(--glow); }
+.reveal-btn.revealed {
+  background: var(--grad); color: #fff; border-color: transparent;
+  box-shadow: 0 3px 14px rgba(141,98,255,.3);
+}
+.reveal-btn svg { transition: transform .3s; }
+.reveal-btn.revealed svg { transform: rotate(180deg); }
+
+.solution-area { margin-top: 1rem; display: none; }
+.solution-area.visible { display: block; }
+.solution-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  color: var(--muted); letter-spacing: .07em; text-transform: uppercase;
+  margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+}
+.solution-label::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); }
+
+.code-block {
+  background: #1e1e2e; border: 1px solid #3a3a5c; border-radius: 10px;
+  padding: 18px 20px; font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; line-height: 1.85; color: #cdd6f4; overflow-x: auto; white-space: pre;
+}
+.code-block .kw  { color: #cba6f7; }
+.code-block .typ { color: #89b4fa; }
+.code-block .str { color: #a6e3a1; }
+.code-block .num { color: #fab387; }
+.code-block .cmt { color: #6c7086; font-style: italic; }
+.code-block .cls { color: #f5c2e7; }
+.code-block .mtd { color: #89dceb; }
+.code-block .ann { color: #f9e2af; }
+
+.output-block {
+  background: #12121e; border: 1px solid #2a2a40; border-radius: 8px;
+  padding: 14px 18px; margin-top: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.8;
+  color: #a6e3a1; overflow-x: auto; white-space: pre;
+}
+.output-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  color: var(--muted); letter-spacing: .07em; text-transform: uppercase;
+  margin: 12px 0 6px; display: flex; align-items: center; gap: 6px;
+}
+.output-label::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #a6e3a1; }
+
+.diff-bar { display: flex; gap: 4px; align-items: center; }
+.diff-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+.diff-dot.filled-easy   { background: #00c896; }
+.diff-dot.filled-medium { background: #d48a00; }
+.diff-dot.filled-hard   { background: #d63030; }
+
+.progress-area {
+  display: flex; align-items: center; gap: 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 18px; margin-bottom: 1.75rem; box-shadow: 0 2px 8px rgba(141,98,255,0.06);
+}
+.progress-val {
+  font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+  background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  min-width: 60px;
+}
+.progress-label { font-size: 11px; color: var(--muted); }
+.progress-track { flex: 1; background: #e5e2f0; border-radius: 99px; height: 8px; overflow: hidden; }
+.progress-fill  { height: 100%; border-radius: 99px; background: var(--grad); width: 0%; transition: width .4s cubic-bezier(.4,0,.2,1); }
+
+.tip-box {
+  margin-top: 12px; padding: 12px 14px;
+  background: rgba(141,98,255,.08); border: 1px solid rgba(141,98,255,.2);
+  border-radius: 8px; font-size: 13px; color: var(--muted); line-height: 1.65;
+}
+
+footer { text-align: center; margin-top: 3rem; font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+footer span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; }
+
+@media (max-width: 540px) {
+  .ex-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .code-block { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <img class="header-logo" src="https://capacitabrasil.irede.org.br/assets/capacitaLogo-Ct3BEyem.png" alt="Capacita Brasil"/>
+  <div class="logo">&#x2615; <span>//</span> Java</div>
+  <div class="subtitle">Desenvolvimento Java &mdash; Assunto 06 | Aulas 11 e 12</div>
+  <div class="header-badge">Questões de Implementação</div>
+</header>
+
+<div class="wrap">
+
+  <a class="back-link" href="index.html">&#x2190; Voltar para a Aula</a>
+
+  <div class="info-card">
+    <div class="info-card-title">
+      Services, ModelMapper e Rotas RESTful no Task Manager
+      <span class="pill pill-grad">5 questões</span>
+      <span class="pill pill-green">Nível Básico a Avançado</span>
+    </div>
+    <p>Reproduza, passo a passo, o que as aulas 11 e 12 entregam no <strong style="color:var(--text)">taskmanager-api</strong>: o <strong style="color:var(--text)">ModelMapper</strong> como bean, o <span class="ic">UsuarioService</span> e o <span class="ic">TarefaService</span> com o CRUD completo (aula 11), o <span class="ic">PATCH</span>, o <span class="ic">201</span> com <span class="ic">Location</span> absoluto, a paginação e o sub-recurso <span class="ic">/usuarios/{id}/tarefas</span> (aula 12), fechando a release <span class="ic">v0.2.0</span>. O ponto de partida é o projeto do fim da aula 10 (DTOs com mapeamento manual nos controladores, <span class="ic">ErrorResponse</span> e <span class="ic">GlobalExceptionHandler</span>). Cada questão parte do código da anterior. Tente resolver por conta própria e depois revele a solução para conferir.</p>
+  </div>
+
+  <div class="progress-area">
+    <div>
+      <div class="progress-val" id="progressVal">0/5</div>
+      <div class="progress-label">reveladas</div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+
+  <!-- ═══════════ QUESTÃO 1 ═══════════ -->
+  <div class="ex-card">
+    <div class="ex-header">
+      <div class="ex-number">1)</div>
+      <div class="ex-title">ModelMapper no pom.xml e o AppConfig</div>
+      <span class="pill pill-green">Básico</span>
+      <div class="diff-bar" title="Dificuldade: Básico">
+        <div class="diff-dot filled-easy"></div>
+        <div class="diff-dot"></div>
+        <div class="diff-dot"></div>
+        <div class="diff-dot"></div>
+        <div class="diff-dot"></div>
+      </div>
+    </div>
+    <div class="ex-body">
+      <div class="ex-enunciado">
+        Aula 11: prepare o projeto para o <strong>mapeamento automático</strong>. Adicione a biblioteca e faça o passo "Obrigatório!" do slide: ensinar o Spring a criar e gerenciar o ModelMapper.
+      </div>
+      <div class="ex-requisitos">
+        <div class="ex-requisitos-title">Requisitos</div>
+        <ul>
+          <li>Dependência <span class="ic">org.modelmapper:modelmapper</span> no <span class="ic">pom.xml</span>, com <span class="ic">&lt;version&gt;</span> explícita (o Spring Boot não gerencia essa versão)</li>
+          <li>Classe <span class="ic">AppConfig</span> no pacote <span class="ic">config</span>, com <span class="ic">@Configuration</span></li>
+          <li>Método <span class="ic">@Bean</span> <span class="ic">modelMapper()</span> que retorna <span class="ic">new ModelMapper()</span></li>
+          <li>No NetBeans: <em>Clean and Build</em> (Shift+F11) para baixar a dependência e subir a aplicação</li>
+        </ul>
+      </div>
+      <button class="reveal-btn" onclick="toggleSolution(1, this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Ver solução
+      </button>
+      <div class="solution-area" id="sol1">
+        <div class="solution-label">Solução</div>
+        <div class="code-block"><span class="cmt">&lt;!-- pom.xml, dentro de &lt;dependencies&gt; --&gt;</span>
+&lt;<span class="cls">dependency</span>&gt;
+    &lt;<span class="cls">groupId</span>&gt;org.modelmapper&lt;/<span class="cls">groupId</span>&gt;
+    &lt;<span class="cls">artifactId</span>&gt;modelmapper&lt;/<span class="cls">artifactId</span>&gt;
+    &lt;<span class="cls">version</span>&gt;3.2.0&lt;/<span class="cls">version</span>&gt;
+&lt;/<span class="cls">dependency</span>&gt;</div>
+        <div class="code-block" style="margin-top:10px"><span class="kw">package</span> br.org.irede.taskmanagerapi.config;
+
+<span class="kw">import</span> org.modelmapper.<span class="typ">ModelMapper</span>;
+<span class="kw">import</span> org.springframework.context.annotation.<span class="ann">Bean</span>;
+<span class="kw">import</span> org.springframework.context.annotation.<span class="ann">Configuration</span>;
+
+<span class="ann">@Configuration</span>
+<span class="kw">public class</span> <span class="cls">AppConfig</span> {
+
+    <span class="ann">@Bean</span>
+    <span class="kw">public</span> <span class="typ">ModelMapper</span> <span class="mtd">modelMapper</span>() {
+        <span class="kw">return new</span> <span class="typ">ModelMapper</span>();
+    }
+}</div>
+        <div class="output-label">Console do NetBeans (Run)</div>
+        <div class="output-block">  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.7)
+
+<span style="color:#89dceb">INFO 23510 --- [taskmanager-api] [           main] b.o.i.t.TaskmanagerApiApplication        : Starting TaskmanagerApiApplication using Java 25</span>
+...
+<span style="color:#89dceb">INFO 23510 --- [taskmanager-api] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'</span>
+<span style="color:#89dceb">INFO 23510 --- [taskmanager-api] [           main] b.o.i.t.TaskmanagerApiApplication        : Started TaskmanagerApiApplication in 4.127 seconds (process running for 4.612)</span></div>
+        <div class="tip-box">&#x1F4A1; Nada muda no comportamento ainda: o bean existe, mas ninguém o usa. O <span class="ic">AppConfig</span> fica no pacote <span class="ic">config</span>, ao lado da <span class="ic">CargaInicial</span>, como diz o slide ("config/ &mdash; Beans, Segurança"). Na aula 13, o <span class="ic">SecurityConfig</span> também vai morar aí. O Spring encontra o <span class="ic">AppConfig</span> sozinho porque ele está abaixo do pacote da classe com <span class="ic">@SpringBootApplication</span>.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ QUESTÃO 2 ═══════════ -->
+  <div class="ex-card">
+    <div class="ex-header">
+      <div class="ex-number">2)</div>
+      <div class="ex-title">UsuarioService e um UsuarioController enxuto</div>
+      <span class="pill pill-green">Básico</span>
+      <div class="diff-bar" title="Dificuldade: Básico">
+        <div class="diff-dot filled-easy"></div>
+        <div class="diff-dot filled-easy"></div>
+        <div class="diff-dot"></div>
+        <div class="diff-dot"></div>
+        <div class="diff-dot"></div>
+      </div>
+    </div>
+    <div class="ex-body">
+      <div class="ex-enunciado">
+        Reproduza o slide "Usando o ModelMapper (é simples!)" com o Usuario: crie a <strong>camada de serviço</strong> do usuário e tire do <span class="ic">UsuarioController</span> o repositório e o <span class="ic">converterParaDto</span> manual da aula 10.
+      </div>
+      <div class="ex-requisitos">
+        <div class="ex-requisitos-title">Requisitos</div>
+        <ul>
+          <li>Pacote novo <span class="ic">service</span> com a classe <span class="ic">UsuarioService</span> anotada com <span class="ic">@Service</span></li>
+          <li><span class="ic">UsuarioRepository</span> e <span class="ic">ModelMapper</span> injetados pelo construtor</li>
+          <li><span class="ic">buscarPorId(Long)</span> devolvendo <span class="ic">UsuarioDTO</span> com <span class="ic">modelMapper.map(...)</span></li>
+          <li><span class="ic">buscarUsuario(Long)</span> público, devolvendo a entidade ou lançando <span class="ic">ResourceNotFoundException</span> (será usado pelo <span class="ic">TarefaService</span>)</li>
+          <li><span class="ic">UsuarioController</span> recebendo só o <span class="ic">UsuarioService</span></li>
+        </ul>
+      </div>
+      <button class="reveal-btn" onclick="toggleSolution(2, this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Ver solução
+      </button>
+      <div class="solution-area" id="sol2">
+        <div class="solution-label">Solução</div>
+        <div class="code-block"><span class="kw">package</span> br.org.irede.taskmanagerapi.service;
+
+<span class="kw">import</span> br.org.irede.taskmanagerapi.dto.<span class="cls">UsuarioDTO</span>;
+<span class="kw">import</span> br.org.irede.taskmanagerapi.exception.<span class="cls">ResourceNotFoundException</span>;
+<span class="kw">import</span> br.org.irede.taskmanagerapi.model.<span class="cls">Usuario</span>;
+<span class="kw">import</span> br.org.irede.taskmanagerapi.repository.<span class="cls">UsuarioRepository</span>;
+<span class="kw">import</span> org.modelmapper.<span class="typ">ModelMapper</span>;
+<span class="kw">import</span> org.springframework.stereotype.<span class="ann">Service</span>;
+
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">UsuarioService</span> {
+
+    <span class="kw">private final</span> <span class="cls">UsuarioRepository</span> repository;
+    <span class="kw">private final</span> <span class="typ">ModelMapper</span> modelMapper;
+
+    <span class="kw">public</span> <span class="cls">UsuarioService</span>(<span class="cls">UsuarioRepository</span> repository, <span class="typ">ModelMapper</span> modelMapper) {
+        <span class="kw">this</span>.repository = repository;
+        <span class="kw">this</span>.modelMapper = modelMapper;   <span class="cmt">// Injeta o bean do AppConfig</span>
+    }
+
+    <span class="kw">public</span> <span class="cls">UsuarioDTO</span> <span class="mtd">buscarPorId</span>(<span class="typ">Long</span> id) {
+        <span class="cmt">// Mapeamento automático!</span>
+        <span class="kw">return</span> modelMapper.<span class="mtd">map</span>(<span class="mtd">buscarUsuario</span>(id), <span class="cls">UsuarioDTO</span>.<span class="kw">class</span>);
+    }
+
+    <span class="kw">public</span> <span class="cls">Usuario</span> <span class="mtd">buscarUsuario</span>(<span class="typ">Long</span> id) {
+        <span class="kw">return</span> repository.<span class="mtd">findById</span>(id)
+                .<span class="mtd">orElseThrow</span>(() -&gt; <span class="kw">new</span> <span class="cls">ResourceNotFoundException</span>(<span class="str">"Usuário com id "</span> + id + <span class="str">" não encontrado"</span>));
+    }
+}</div>
+        <div class="code-block" style="margin-top:10px"><span class="kw">package</span> br.org.irede.taskmanagerapi.controller;
+
+<span class="kw">import</span> br.org.irede.taskmanagerapi.dto.<span class="cls">UsuarioDTO</span>;
+<span class="kw">import</span> br.org.irede.taskmanagerapi.service.<span class="cls">UsuarioService</span>;
+<span class="kw">import</span> org.springframework.web.bind.annotation.*;
+
+<span class="ann">@RestController</span>
+<span class="ann">@RequestMapping</span>(<span class="str">"/api/v1/usuarios"</span>)
+<span class="kw">public class</span> <span class="cls">UsuarioController</span> {
+
+    <span class="kw">private final</span> <span class="cls">UsuarioService</span> service;
+
+    <span class="kw">public</span> <span class="cls">UsuarioController</span>(<span class="cls">UsuarioService</span> service) {
+        <span class="kw">this</span>.service = service;
+    }
+
+    <span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)
+    <span class="kw">public</span> <span class="cls">UsuarioDTO</span> <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+        <span class="kw">return</span> service.<span class="mtd">buscarPorId</span>(id);
+    }
+}</div>
+        <div class="output-label">Postman: GET {{baseUrl}}/usuarios/1</div>
+        <div class="output-block"><span style="color:#a6e3a1">HTTP/1.1 200 OK</span>
+Content-Type: application/json
+Date: Tue, 01 Dec 2026 22:04:12 GMT
+
+{
+  "id": 1,
+  "nome": "Ana Souza",
+  "email": "ana@email.com"
+}
+
+<span style="color:#6c7086">// console, na primeira conversão (Java 25):</span>
+<span style="color:#fab387">WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by org.modelmapper.internal.typetools.TypeResolver</span></div>
+        <div class="tip-box">&#x1F4A1; Mesma resposta da aula 10, agora sem nenhum <span class="ic">set</span> escrito à mão: o ModelMapper casou <span class="ic">id</span>, <span class="ic">nome</span> e <span class="ic">email</span> pelo nome e ignorou <span class="ic">senha</span> e <span class="ic">tarefas</span>, que não existem no DTO. O <span class="ic">WARNING</span> de <span class="ic">sun.misc.Unsafe</span> é um aviso da JVM (JDK 24+) sobre um método interno usado pelo ModelMapper: a conversão funciona normalmente. Se você esquecer o <span class="ic">AppConfig</span>, a aplicação nem sobe: <em>"Parameter 1 of constructor in br.org.irede.taskmanagerapi.service.UsuarioService required a bean of type 'org.modelmapper.ModelMapper' that could not be found."</em></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ QUESTÃO 3 ═══════════ -->
+  <div class="ex-card">
+    <div class="ex-header">
+      <div class="ex-number">3)</div>
+      <div class="ex-title">TarefaService: o CRUD Completo com DTOs e Serviços</div>
+      <span class="pill pill-amber">Intermediário</span>
+      <div class="diff-bar" title="Dificuldade: Intermediário">
+        <div class="diff-dot filled-medium"></div>
+        <div class="diff-dot filled-medium"></div>
+        <div class="diff-dot filled-medium"></div>
+        <div class="diff-dot"></div>
+        <div class="diff-dot"></div>
+      </div>
+    </div>
+    <div class="ex-body">
+      <div class="ex-enunciado">
+        Feche a aula 11: a conversão vai para a <strong>Camada de Serviço</strong>, e "o Controlador e o Cliente Externo nunca tocam na Entidade". Mova tudo o que o <span class="ic">TarefaController</span> da aula 10 fazia além de HTTP para um <span class="ic">TarefaService</span>. A coleção do Postman tem que passar inteira, sem alteração.
+      </div>
+      <div class="ex-requisitos">
+        <div class="ex-requisitos-title">Requisitos</div>
+        <ul>
+          <li><span class="ic">TarefaService</span> com <span class="ic">listar</span>, <span class="ic">buscarPorId</span>, <span class="ic">criar</span>, <span class="ic">atualizar</span> e <span class="ic">remover</span>, todos trabalhando com <span class="ic">TarefaDTO</span></li>
+          <li>O dono buscado pelo <span class="ic">UsuarioService.buscarUsuario</span> (não pelo <span class="ic">UsuarioRepository</span>)</li>
+          <li>Saída com <span class="ic">modelMapper.map(tarefa, TarefaDTO.class)</span>; entrada com <span class="ic">copiarParaEntidade</span> campo a campo (o <span class="ic">id</span> e o dono nunca vêm do cliente)</li>
+          <li><span class="ic">TarefaController</span> recebendo só o <span class="ic">TarefaService</span>, sem nenhum import de <span class="ic">model</span> ou <span class="ic">repository</span></li>
+        </ul>
+      </div>
+      <button class="reveal-btn" onclick="toggleSolution(3, this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Ver solução
+      </button>
+      <div class="solution-area" id="sol3">
+        <div class="solution-label">Solução</div>
+        <div class="code-block"><span class="kw">package</span> br.org.irede.taskmanagerapi.service;
+
+<span class="cmt">// imports: TarefaDTO, ResourceNotFoundException, Tarefa, Usuario, TarefaRepository,</span>
+<span class="cmt">// java.util.List, org.modelmapper.ModelMapper, org.springframework.stereotype.Service</span>
+
+<span class="ann">@Service</span>
+<span class="kw">public class</span> <span class="cls">TarefaService</span> {
+
+    <span class="kw">private final</span> <span class="cls">TarefaRepository</span> repository;
+    <span class="kw">private final</span> <span class="cls">UsuarioService</span> usuarioService;
+    <span class="kw">private final</span> <span class="typ">ModelMapper</span> modelMapper;
+
+    <span class="kw">public</span> <span class="cls">TarefaService</span>(<span class="cls">TarefaRepository</span> repository, <span class="cls">UsuarioService</span> usuarioService,
+                         <span class="typ">ModelMapper</span> modelMapper) {
+        <span class="kw">this</span>.repository = repository;
+        <span class="kw">this</span>.usuarioService = usuarioService;
+        <span class="kw">this</span>.modelMapper = modelMapper;
+    }
+
+    <span class="kw">public</span> <span class="typ">List</span>&lt;<span class="cls">TarefaDTO</span>&gt; <span class="mtd">listar</span>() {
+        <span class="kw">return</span> repository.<span class="mtd">findAll</span>().<span class="mtd">stream</span>()
+                .<span class="mtd">map</span>(<span class="kw">this</span>::<span class="mtd">converterParaDto</span>)
+                .<span class="mtd">toList</span>();
+    }
+
+    <span class="kw">public</span> <span class="cls">TarefaDTO</span> <span class="mtd">buscarPorId</span>(<span class="typ">Long</span> id) {
+        <span class="kw">return</span> <span class="mtd">converterParaDto</span>(<span class="mtd">buscarTarefa</span>(id));
+    }
+
+    <span class="kw">public</span> <span class="cls">TarefaDTO</span> <span class="mtd">criar</span>(<span class="cls">TarefaDTO</span> dto) {
+        <span class="cls">Usuario</span> dono = usuarioService.<span class="mtd">buscarUsuario</span>(dto.<span class="mtd">getUsuarioId</span>());
+        <span class="cls">Tarefa</span> tarefa = <span class="kw">new</span> <span class="cls">Tarefa</span>();
+        <span class="mtd">copiarParaEntidade</span>(dto, tarefa);
+        tarefa.<span class="mtd">setUsuario</span>(dono);
+        <span class="kw">return</span> <span class="mtd">converterParaDto</span>(repository.<span class="mtd">save</span>(tarefa));
+    }
+
+    <span class="kw">public</span> <span class="cls">TarefaDTO</span> <span class="mtd">atualizar</span>(<span class="typ">Long</span> id, <span class="cls">TarefaDTO</span> dto) {
+        <span class="cls">Tarefa</span> tarefa = <span class="mtd">buscarTarefa</span>(id);
+        <span class="mtd">copiarParaEntidade</span>(dto, tarefa);   <span class="cmt">// o dono não muda no PUT</span>
+        <span class="kw">return</span> <span class="mtd">converterParaDto</span>(repository.<span class="mtd">save</span>(tarefa));
+    }
+
+    <span class="kw">public void</span> <span class="mtd">remover</span>(<span class="typ">Long</span> id) {
+        <span class="kw">if</span> (!repository.<span class="mtd">existsById</span>(id)) {
+            <span class="kw">throw new</span> <span class="cls">ResourceNotFoundException</span>(<span class="str">"Tarefa com id "</span> + id + <span class="str">" não encontrada"</span>);
+        }
+        repository.<span class="mtd">deleteById</span>(id);
+    }
+
+    <span class="kw">private</span> <span class="cls">Tarefa</span> <span class="mtd">buscarTarefa</span>(<span class="typ">Long</span> id) {
+        <span class="kw">return</span> repository.<span class="mtd">findById</span>(id)
+                .<span class="mtd">orElseThrow</span>(() -&gt; <span class="kw">new</span> <span class="cls">ResourceNotFoundException</span>(<span class="str">"Tarefa com id "</span> + id + <span class="str">" não encontrada"</span>));
+    }
+
+    <span class="kw">private</span> <span class="cls">TarefaDTO</span> <span class="mtd">converterParaDto</span>(<span class="cls">Tarefa</span> tarefa) {
+        <span class="kw">return</span> modelMapper.<span class="mtd">map</span>(tarefa, <span class="cls">TarefaDTO</span>.<span class="kw">class</span>);
+    }
+
+    <span class="kw">private void</span> <span class="mtd">copiarParaEntidade</span>(<span class="cls">TarefaDTO</span> dto, <span class="cls">Tarefa</span> tarefa) {
+        tarefa.<span class="mtd">setTitulo</span>(dto.<span class="mtd">getTitulo</span>());
+        tarefa.<span class="mtd">setDescricao</span>(dto.<span class="mtd">getDescricao</span>());
+        tarefa.<span class="mtd">setPrioridade</span>(dto.<span class="mtd">getPrioridade</span>());
+        tarefa.<span class="mtd">setPrazo</span>(dto.<span class="mtd">getPrazo</span>());
+        tarefa.<span class="mtd">setConcluida</span>(dto.<span class="mtd">isConcluida</span>());
+    }
+}</div>
+        <div class="code-block" style="margin-top:10px"><span class="kw">package</span> br.org.irede.taskmanagerapi.controller;
+
+<span class="cmt">// imports: TarefaDTO, TarefaService, jakarta.validation.Valid, java.net.URI, java.util.List,</span>
+<span class="cmt">// org.springframework.http.ResponseEntity e org.springframework.web.bind.annotation.*</span>
+
+<span class="ann">@RestController</span>
+<span class="ann">@RequestMapping</span>(<span class="str">"/api/v1/tarefas"</span>)
+<span class="kw">public class</span> <span class="cls">TarefaController</span> {
+
+    <span class="kw">private final</span> <span class="cls">TarefaService</span> service;
+
+    <span class="kw">public</span> <span class="cls">TarefaController</span>(<span class="cls">TarefaService</span> service) {
+        <span class="kw">this</span>.service = service;
+    }
+
+    <span class="ann">@GetMapping</span>
+    <span class="kw">public</span> <span class="typ">List</span>&lt;<span class="cls">TarefaDTO</span>&gt; <span class="mtd">listar</span>() {
+        <span class="kw">return</span> service.<span class="mtd">listar</span>();
+    }
+
+    <span class="ann">@GetMapping</span>(<span class="str">"/{id}"</span>)
+    <span class="kw">public</span> <span class="cls">TarefaDTO</span> <span class="mtd">buscarPorId</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+        <span class="kw">return</span> service.<span class="mtd">buscarPorId</span>(id);
+    }
+
+    <span class="ann">@PostMapping</span>
+    <span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">TarefaDTO</span>&gt; <span class="mtd">criar</span>(<span class="ann">@Valid</span> <span class="ann">@RequestBody</span> <span class="cls">TarefaDTO</span> dto) {
+        <span class="cls">TarefaDTO</span> criada = service.<span class="mtd">criar</span>(dto);
+        <span class="typ">URI</span> location = <span class="typ">URI</span>.<span class="mtd">create</span>(<span class="str">"/api/v1/tarefas/"</span> + criada.<span class="mtd">getId</span>());
+        <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">created</span>(location).<span class="mtd">body</span>(criada);
+    }
+
+    <span class="ann">@PutMapping</span>(<span class="str">"/{id}"</span>)
+    <span class="kw">public</span> <span class="cls">TarefaDTO</span> <span class="mtd">atualizar</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id, <span class="ann">@Valid</span> <span class="ann">@RequestBody</span> <span class="cls">TarefaDTO</span> dto) {
+        <span class="kw">return</span> service.<span class="mtd">atualizar</span>(id, dto);
+    }
+
+    <span class="ann">@DeleteMapping</span>(<span class="str">"/{id}"</span>)
+    <span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="typ">Void</span>&gt; <span class="mtd">remover</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+        service.<span class="mtd">remover</span>(id);
+        <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">noContent</span>().<span class="mtd">build</span>();
+    }
+}</div>
+        <div class="output-label">Postman: POST {{baseUrl}}/tarefas</div>
+        <div class="output-block"><span style="color:#6c7086">// corpo enviado:</span>
+{ "titulo": "Criar o TarefaService", "descricao": "Mover a regra para a camada de serviço", "prioridade": "ALTA", "prazo": "2026-12-01", "usuarioId": 2 }
+
+<span style="color:#a6e3a1">HTTP/1.1 201 Created</span>
+Location: /api/v1/tarefas/9
+Content-Type: application/json
+Date: Tue, 01 Dec 2026 22:10:05 GMT
+
+{
+  "id": 9,
+  "titulo": "Criar o TarefaService",
+  "descricao": "Mover a regra para a camada de serviço",
+  "prioridade": "ALTA",
+  "prazo": "2026-12-01",
+  "concluida": false,
+  "usuarioId": 2
+}
+
+<span style="color:#6c7086">// e com "usuarioId": 99 →</span> <span style="color:#f38ba8">404</span> <span style="color:#6c7086">"Usuário com id 99 não encontrado" (vindo do UsuarioService)</span></div>
+        <div class="tip-box">&#x1F4A1; Por que não <span class="ic">modelMapper.map(dto, Tarefa.class)</span> no <span class="ic">criar</span>? Porque ele copiaria um <span class="ic">"id": 5</span> enviado pelo cliente (o <span class="ic">save</span> viraria uma atualização da tarefa 5!) e transformaria <span class="ic">usuarioId</span> em um <span class="ic">new Usuario()</span> só com o id dentro de <span class="ic">tarefa.usuario</span>. ModelMapper na saída, entrada sob controle do service. Confira: os imports do <span class="ic">TarefaController</span> não têm mais <span class="ic">model</span> nem <span class="ic">repository</span>. Commit, PR com <span class="ic">Closes #NN</span> e tag <span class="ic">aula-11</span>.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ QUESTÃO 4 ═══════════ -->
+  <div class="ex-card">
+    <div class="ex-header">
+      <div class="ex-number">4)</div>
+      <div class="ex-title">PATCH e 201 com Location Absoluto</div>
+      <span class="pill pill-amber">Intermediário</span>
+      <div class="diff-bar" title="Dificuldade: Intermediário">
+        <div class="diff-dot filled-medium"></div>
+        <div class="diff-dot filled-medium"></div>
+        <div class="diff-dot filled-medium"></div>
+        <div class="diff-dot filled-medium"></div>
+        <div class="diff-dot"></div>
+      </div>
+    </div>
+    <div class="ex-body">
+      <div class="ex-enunciado">
+        Aula 12, "PUT vs. PATCH": o PUT substitui a tarefa inteira, mas o cliente quer só <strong>marcar como concluída</strong> sem reenviar tudo. Crie a <strong>atualização parcial</strong> e, de quebra, faça o <span class="ic">Location</span> do POST apontar para o endereço completo do recurso criado.
+      </div>
+      <div class="ex-requisitos">
+        <div class="ex-requisitos-title">Requisitos</div>
+        <ul>
+          <li><span class="ic">TarefaDTO.concluida</span> passa de <span class="ic">boolean</span> para <span class="ic">Boolean</span> (getter <span class="ic">getConcluida()</span>)</li>
+          <li>No <span class="ic">copiarParaEntidade</span> do PUT: <span class="ic">Boolean.TRUE.equals(dto.getConcluida())</span>, para que ausente continue valendo <span class="ic">false</span></li>
+          <li><span class="ic">TarefaService.atualizarParcial(Long, TarefaDTO)</span> copiando só os campos não nulos</li>
+          <li><span class="ic">@PatchMapping("/{id}")</span> no controller, <strong>sem</strong> <span class="ic">@Valid</span></li>
+          <li><span class="ic">Location</span> montado com <span class="ic">ServletUriComponentsBuilder.fromCurrentRequest()</span></li>
+          <li>Requisições "Concluir tarefa (PATCH)" e "Concluir tarefa inexistente" na coleção</li>
+        </ul>
+      </div>
+      <button class="reveal-btn" onclick="toggleSolution(4, this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Ver solução
+      </button>
+      <div class="solution-area" id="sol4">
+        <div class="solution-label">Solução</div>
+        <div class="code-block"><span class="cmt">// TarefaDTO.java</span>
+<span class="kw">private</span> <span class="typ">Boolean</span> concluida;
+
+<span class="kw">public</span> <span class="typ">Boolean</span> <span class="mtd">getConcluida</span>() { <span class="kw">return</span> concluida; }
+<span class="kw">public void</span> <span class="mtd">setConcluida</span>(<span class="typ">Boolean</span> concluida) { <span class="kw">this</span>.concluida = concluida; }</div>
+        <div class="code-block" style="margin-top:10px"><span class="cmt">// TarefaService.java</span>
+<span class="kw">public</span> <span class="cls">TarefaDTO</span> <span class="mtd">atualizarParcial</span>(<span class="typ">Long</span> id, <span class="cls">TarefaDTO</span> dto) {
+    <span class="cls">Tarefa</span> tarefa = <span class="mtd">buscarTarefa</span>(id);   <span class="cmt">// 404 de graça</span>
+    <span class="kw">if</span> (dto.<span class="mtd">getTitulo</span>() != <span class="kw">null</span>)     tarefa.<span class="mtd">setTitulo</span>(dto.<span class="mtd">getTitulo</span>());
+    <span class="kw">if</span> (dto.<span class="mtd">getDescricao</span>() != <span class="kw">null</span>)  tarefa.<span class="mtd">setDescricao</span>(dto.<span class="mtd">getDescricao</span>());
+    <span class="kw">if</span> (dto.<span class="mtd">getPrioridade</span>() != <span class="kw">null</span>) tarefa.<span class="mtd">setPrioridade</span>(dto.<span class="mtd">getPrioridade</span>());
+    <span class="kw">if</span> (dto.<span class="mtd">getPrazo</span>() != <span class="kw">null</span>)      tarefa.<span class="mtd">setPrazo</span>(dto.<span class="mtd">getPrazo</span>());
+    <span class="kw">if</span> (dto.<span class="mtd">getConcluida</span>() != <span class="kw">null</span>)  tarefa.<span class="mtd">setConcluida</span>(dto.<span class="mtd">getConcluida</span>());
+    <span class="kw">return</span> <span class="mtd">converterParaDto</span>(repository.<span class="mtd">save</span>(tarefa));
+}
+
+<span class="kw">private void</span> <span class="mtd">copiarParaEntidade</span>(<span class="cls">TarefaDTO</span> dto, <span class="cls">Tarefa</span> tarefa) {
+    <span class="cmt">// ... título, descrição, prioridade e prazo como antes</span>
+    tarefa.<span class="mtd">setConcluida</span>(<span class="typ">Boolean</span>.TRUE.<span class="mtd">equals</span>(dto.<span class="mtd">getConcluida</span>()));   <span class="cmt">// null → false</span>
+}</div>
+        <div class="code-block" style="margin-top:10px"><span class="cmt">// TarefaController.java (import org.springframework.web.servlet.support.ServletUriComponentsBuilder)</span>
+<span class="ann">@PostMapping</span>
+<span class="kw">public</span> <span class="typ">ResponseEntity</span>&lt;<span class="cls">TarefaDTO</span>&gt; <span class="mtd">criar</span>(<span class="ann">@Valid</span> <span class="ann">@RequestBody</span> <span class="cls">TarefaDTO</span> dto) {
+    <span class="cls">TarefaDTO</span> criada = service.<span class="mtd">criar</span>(dto);
+    <span class="typ">URI</span> location = <span class="typ">ServletUriComponentsBuilder</span>.<span class="mtd">fromCurrentRequest</span>()
+            .<span class="mtd">path</span>(<span class="str">"/{id}"</span>)
+            .<span class="mtd">buildAndExpand</span>(criada.<span class="mtd">getId</span>())
+            .<span class="mtd">toUri</span>();
+    <span class="kw">return</span> <span class="typ">ResponseEntity</span>.<span class="mtd">created</span>(location).<span class="mtd">body</span>(criada);
+}
+
+<span class="ann">@PatchMapping</span>(<span class="str">"/{id}"</span>)
+<span class="kw">public</span> <span class="cls">TarefaDTO</span> <span class="mtd">atualizarParcial</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id, <span class="ann">@RequestBody</span> <span class="cls">TarefaDTO</span> dto) {
+    <span class="kw">return</span> service.<span class="mtd">atualizarParcial</span>(id, dto);
+}</div>
+        <div class="output-label">Postman: PATCH {{baseUrl}}/tarefas/1 com { "concluida": true }</div>
+        <div class="output-block"><span style="color:#a6e3a1">HTTP/1.1 200 OK</span>
+Content-Type: application/json
+Date: Thu, 03 Dec 2026 22:18:40 GMT
+
+{
+  "id": 1,
+  "titulo": "Estudar JPA",
+  "descricao": "Revisar @Entity e @Id",
+  "prioridade": "ALTA",
+  "prazo": "2026-11-05",
+  "concluida": true,
+  "usuarioId": 1
+}</div>
+        <div class="output-label">Postman: POST {{baseUrl}}/tarefas (aba Headers)</div>
+        <div class="output-block"><span style="color:#a6e3a1">HTTP/1.1 201 Created</span>
+Location: http://localhost:8080/api/v1/tarefas/9
+Content-Type: application/json</div>
+        <div class="tip-box">&#x1F4A1; Por que sem <span class="ic">@Valid</span> no PATCH? Porque o <span class="ic">TarefaDTO</span> exige <span class="ic">prioridade</span> e <span class="ic">usuarioId</span>: com <span class="ic">@Valid</span>, o <span class="ic">{"concluida": true}</span> daria 400. O preço é que um <span class="ic">{"titulo": ""}</span> passaria sem validação; uma saída é um DTO próprio para o PATCH, ou grupos de validação, que ficam fora do escopo desta aula. No Postman, o <span class="ic">Location</span> absoluto vira link clicável: abre um GET para a tarefa 9.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ QUESTÃO 5 ═══════════ -->
+  <div class="ex-card">
+    <div class="ex-header">
+      <div class="ex-number">5)</div>
+      <div class="ex-title">Paginação, Sub-recurso e a Coleção da v0.2.0</div>
+      <span class="pill pill-red">Avançado</span>
+      <div class="diff-bar" title="Dificuldade: Avançado">
+        <div class="diff-dot filled-hard"></div>
+        <div class="diff-dot filled-hard"></div>
+        <div class="diff-dot filled-hard"></div>
+        <div class="diff-dot filled-hard"></div>
+        <div class="diff-dot filled-hard"></div>
+      </div>
+    </div>
+    <div class="ex-body">
+      <div class="ex-enunciado">
+        Feche a aula 12 e o <strong>Marco 2 &middot; API REST</strong>. A coleção de tarefas não pode voltar inteira de uma vez, e as tarefas de um usuário devem ser acessíveis pela <strong>hierarquia</strong> (Convenção 2). Reaproveite o que a Fase 1 já construiu: o <span class="ic">buscarComFiltros(TarefaFiltro, Pageable)</span> da aula 06 e o <span class="ic">findByUsuarioId</span> da aula 05.
+      </div>
+      <div class="ex-requisitos">
+        <div class="ex-requisitos-title">Requisitos</div>
+        <ul>
+          <li><span class="ic">GET /tarefas</span> devolvendo <span class="ic">Page&lt;TarefaDTO&gt;</span>, aceitando <span class="ic">?prioridade=&amp;usuarioId=&amp;page=&amp;size=&amp;sort=</span>, com padrão de 10 por página ordenadas por <span class="ic">id</span></li>
+          <li><span class="ic">spring.data.web.pageable.serialization-mode=via-dto</span> no <span class="ic">application.properties</span></li>
+          <li><span class="ic">GET /usuarios/{id}/tarefas</span> no <span class="ic">UsuarioController</span>, com 404 para usuário inexistente</li>
+          <li>Coleção do Postman atualizada e exportada (Collection v2.1); <span class="ic">&lt;version&gt;0.2.0&lt;/version&gt;</span> no <span class="ic">pom.xml</span></li>
+        </ul>
+      </div>
+      <button class="reveal-btn" onclick="toggleSolution(5, this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Ver solução
+      </button>
+      <div class="solution-area" id="sol5">
+        <div class="solution-label">Solução</div>
+        <div class="code-block"><span class="cmt">// TarefaService.java (imports: TarefaFiltro, Page, Pageable)</span>
+<span class="kw">public</span> <span class="typ">Page</span>&lt;<span class="cls">TarefaDTO</span>&gt; <span class="mtd">listar</span>(<span class="cls">TarefaFiltro</span> filtro, <span class="typ">Pageable</span> pageable) {
+    <span class="kw">return</span> repository.<span class="mtd">buscarComFiltros</span>(filtro, pageable).<span class="mtd">map</span>(<span class="kw">this</span>::<span class="mtd">converterParaDto</span>);
+}
+
+<span class="kw">public</span> <span class="typ">List</span>&lt;<span class="cls">TarefaDTO</span>&gt; <span class="mtd">listarPorUsuario</span>(<span class="typ">Long</span> usuarioId) {
+    usuarioService.<span class="mtd">buscarUsuario</span>(usuarioId);   <span class="cmt">// o pai precisa existir</span>
+    <span class="kw">return</span> repository.<span class="mtd">findByUsuarioId</span>(usuarioId).<span class="mtd">stream</span>()
+            .<span class="mtd">map</span>(<span class="kw">this</span>::<span class="mtd">converterParaDto</span>)
+            .<span class="mtd">toList</span>();
+}</div>
+        <div class="code-block" style="margin-top:10px"><span class="cmt">// TarefaController.java (imports: TarefaFiltro, Page, Pageable, org.springframework.data.web.PageableDefault)</span>
+<span class="ann">@GetMapping</span>
+<span class="kw">public</span> <span class="typ">Page</span>&lt;<span class="cls">TarefaDTO</span>&gt; <span class="mtd">listar</span>(<span class="cls">TarefaFiltro</span> filtro,
+                              <span class="ann">@PageableDefault</span>(size = <span class="num">10</span>, sort = <span class="str">"id"</span>) <span class="typ">Pageable</span> pageable) {
+    <span class="kw">return</span> service.<span class="mtd">listar</span>(filtro, pageable);
+}
+
+<span class="cmt">// UsuarioController.java — agora com os dois services</span>
+<span class="kw">private final</span> <span class="cls">UsuarioService</span> service;
+<span class="kw">private final</span> <span class="cls">TarefaService</span> tarefaService;
+
+<span class="kw">public</span> <span class="cls">UsuarioController</span>(<span class="cls">UsuarioService</span> service, <span class="cls">TarefaService</span> tarefaService) {
+    <span class="kw">this</span>.service = service;
+    <span class="kw">this</span>.tarefaService = tarefaService;
+}
+
+<span class="ann">@GetMapping</span>(<span class="str">"/{id}/tarefas"</span>)
+<span class="kw">public</span> <span class="typ">List</span>&lt;<span class="cls">TarefaDTO</span>&gt; <span class="mtd">listarTarefas</span>(<span class="ann">@PathVariable</span> <span class="typ">Long</span> id) {
+    <span class="kw">return</span> tarefaService.<span class="mtd">listarPorUsuario</span>(id);
+}</div>
+        <div class="code-block" style="margin-top:10px"><span class="cmt"># application.properties</span>
+<span class="mtd">spring.data.web.pageable.serialization-mode</span>=via-dto</div>
+        <div class="output-label">Postman: GET {{baseUrl}}/tarefas?prioridade=ALTA&amp;page=0&amp;size=2&amp;sort=prazo</div>
+        <div class="output-block"><span style="color:#a6e3a1">HTTP/1.1 200 OK</span>
+Content-Type: application/json
+Date: Thu, 03 Dec 2026 22:25:31 GMT
+
+{
+  "content": [
+    { "id": 1, "titulo": "Estudar JPA", "descricao": "Revisar @Entity e @Id", "prioridade": "ALTA", "prazo": "2026-11-05", "concluida": false, "usuarioId": 1 },
+    { "id": 6, "titulo": "Preparar apresentação", "descricao": "Slides do assunto 03", "prioridade": "ALTA", "prazo": "2026-11-08", "concluida": false, "usuarioId": 2 }
+  ],
+  "page": {
+    "size": 2,
+    "number": 0,
+    "totalElements": 4,
+    "totalPages": 2
+  }
+}
+
+<span style="color:#6c7086">// console:</span>
+Hibernate:
+    select
+        t1_0.id,
+        t1_0.concluida,
+        t1_0.descricao,
+        t1_0.prazo,
+        t1_0.prioridade,
+        t1_0.titulo,
+        t1_0.usuario_id
+    from
+        tarefas t1_0
+    where
+        t1_0.prioridade=?
+    order by
+        t1_0.prazo
+    fetch
+        first ? rows only
+Hibernate:
+    select
+        count(t1_0.id)
+    from
+        tarefas t1_0
+    where
+        t1_0.prioridade=?</div>
+        <div class="output-label">Postman: GET {{baseUrl}}/usuarios/99/tarefas</div>
+        <div class="output-block"><span style="color:#f38ba8">HTTP/1.1 404 Not Found</span>
+Content-Type: application/json
+
+{
+  "timestamp": "2026-12-03T19:27:02.318",
+  "status": 404,
+  "erro": "Não encontrado",
+  "mensagem": "Usuário com id 99 não encontrado",
+  "caminho": "/api/v1/usuarios/99/tarefas"
+}</div>
+        <div class="output-label">Coleção da v0.2.0 (exportada em Collection v2.1)</div>
+        <div class="output-block">&#x1F4C1; Task Manager API          baseUrl = http://localhost:8080/api/v1
+ ├── GET    Listar tarefas (paginado)      200  content + page        <span style="color:#fab387">← mudou: era uma lista</span>
+ ├── GET    Listar tarefas ALTA, pág. 0    200  ?prioridade=ALTA&amp;size=2&amp;sort=prazo
+ ├── GET    Buscar tarefa                   200
+ ├── GET    Buscar tarefa inexistente       404  ErrorResponse
+ ├── POST   Criar tarefa                    201  Location absoluto      <span style="color:#fab387">← mudou</span>
+ ├── POST   Criar tarefa inválida           400  ErrorResponse com os campos
+ ├── POST   Criar tarefa de usuário 99      404
+ ├── PUT    Atualizar tarefa                200
+ ├── PATCH  Concluir tarefa                 200  { "concluida": true }  <span style="color:#a6e3a1">← novo</span>
+ ├── PATCH  Concluir tarefa inexistente     404                         <span style="color:#a6e3a1">← novo</span>
+ ├── DELETE Remover tarefa                  204
+ ├── GET    Buscar usuário                  200  UsuarioDTO, sem senha
+ ├── GET    Buscar usuário inexistente      404
+ ├── GET    Tarefas do usuário 2            200  /usuarios/2/tarefas    <span style="color:#a6e3a1">← novo</span>
+ └── GET    Tarefas do usuário 99           404                         <span style="color:#a6e3a1">← novo</span></div>
+        <div class="tip-box">&#x1F4A1; O <span class="ic">TarefaFiltro</span> não tem anotação no parâmetro: o Spring trata um objeto simples como <span class="ic">@ModelAttribute</span> e preenche os campos com os parâmetros de mesmo nome (<span class="ic">?prioridade=ALTA</span> &rarr; <span class="ic">setPrioridade</span>). Na página 0, o Hibernate omite o <span class="ic">offset</span>; na página 1, aparece <span class="ic">offset ? rows</span>. Repare na ordem por prazo: a tarefa 8 (ALTA, sem prazo) fica por último, porque no PostgreSQL o <span class="ic">NULL</span> vem depois na ordem crescente. Para fechar o marco: tag <span class="ic">aula-12</span> e release <span class="ic">v0.2.0</span> no GitHub, com a coleção exportada anexada.</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<footer>
+  Capacita Brasil &mdash; <span>iRede</span> &mdash; Material Interativo de Java
+</footer>
+
+<script>
+let revealed = 0;
+
+function toggleSolution(num, btn) {
+  const sol = document.getElementById('sol' + num);
+  const isVisible = sol.classList.contains('visible');
+
+  if (!isVisible) {
+    sol.classList.add('visible');
+    btn.classList.add('revealed');
+    btn.innerHTML =
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transform:rotate(180deg)"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+      'Ocultar solução';
+    if (!btn.dataset.counted) {
+      btn.dataset.counted = '1';
+      revealed++;
+      updateProgress();
+    }
+  } else {
+    sol.classList.remove('visible');
+    btn.classList.remove('revealed');
+    btn.innerHTML =
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+      'Ver solução';
+  }
+}
+
+function updateProgress() {
+  document.getElementById('progressVal').textContent  = revealed + '/5';
+  document.getElementById('progressFill').style.width = (revealed / 5 * 100) + '%';
+}
+</script>
+</body>
+</html>
